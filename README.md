@@ -9,7 +9,7 @@ Search Bar
 
 ## Search Bar
 
-![Search Bar](screenshots/search.png)
+![Search Bar](screenshots_for_readme/search.png)
 
 Results Page
 1. The results are sepeartated by the selected databases.
@@ -20,12 +20,12 @@ Results Page
 6. For the databases that dont have any information we show clear information about the non existence of data in the database.
 
 
-![Search Summary](screenshots/search_summary.png)
+![Search Summary](screenshots_for_readme/search_summary.png)
 
-![Sample Result 1](screenshots/sample_result.png)
-![Sample Result 2](screenshots/sample_result_2.png)
+![Sample Result 1](screenshots_for_readme/sample_result.png)
+![Sample Result 2](screenshots_for_readme/sample_result_2.png)
 
-![Data dne](screenshots/dne.png)
+![Data dne](screenshots_for_readme/dne.png)
 
 Downloading the Data
 1. We allow the users to allow data in the a highly customisable manner in the PSI-MI TAB 2.8 Format, which is the standard format used by the community and is a tab seperated format .
@@ -33,10 +33,10 @@ Downloading the Data
 3. Apache Parquet file has also been incorporated as the TAB file can get extremely complex and large for 1000s of interactions therefore we have implements the binary parquet file format as well. This format can also be used for machine learning and other secondary analysis.
 
 
-![MI TAB](screenshots/download_results.png)
+![MI TAB](screenshots_for_readme/download_results.png)
 
-![Parquet](screenshots/download_results_2.png)
+![Parquet](screenshots_for_readme/download_results_2.png)
 
-![Downloaded MI TAB](screenshots/mitab.png)
+![Downloaded MI TAB](screenshots_for_readme/mitab.png)
 
-![Downloaded  Parquet](screenshots/parquet.png)
+![Downloaded  Parquet](screenshots_for_readme/parquet.png)
