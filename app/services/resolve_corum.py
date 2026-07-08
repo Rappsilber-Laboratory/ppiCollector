@@ -30,7 +30,7 @@ def resolve_corum(input_id:str,tax_id:str):
             for subunit in df.loc[i,'subunits']:
                 if(subunit['swissprot']['uniprot_id']==input_id):
                     continue
-                interactors_list.append({"Interactor":subunit['swissprot']['uniprot_id'],"Organism":subunit['swissprot']['organism'],"Interactor_Link":f"https://mips.helmholtz-muenchen.de/corum/?query={subunit['swissprot']['uniprot_id']}"})
+                interactors_list.append({"Interactor_A":subunit['swissprot']['uniprot_id'],"Interactor_B":input_id,"Organism":subunit['swissprot']['organism'],"Interactor_Link":f"https://mips.helmholtz-muenchen.de/corum/?query={subunit['swissprot']['uniprot_id']}"})
             interactions.append({"Interactors":interactors_list})
             break
         i+=1

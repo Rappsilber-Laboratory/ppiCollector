@@ -1,5 +1,7 @@
+import io
 from typing import List, Optional
 from fastapi import FastAPI,HTTPException, Query,Depends,Header
+from fastapi.responses import StreamingResponse
 from app.services.convert_input_to_uniprotKB import get_job_id
 from app.services.resolve_string import get_string_interactions
 from app.services.resolve_intact import resolve_intact
@@ -11,17 +13,30 @@ from app.services.convert_input_to_ensembl import convert_to_ensemble
 from app.supabase_client import supabase
 import pandas as pd
 
+from app.services.select_columns_mitab import build_final_columns
+from app.services.populate_mitab import DBs,populate_huri
+from app.services.toParquet import flatten_results
+
 from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel,EmailStr
 from app.supabase_client import supabase,supabase_admin
 
 from app.dependencies import get_optional_user
 
+from fastapi.middleware.cors import CORSMiddleware
+
+
 class AuthCredentials(BaseModel):
     email:EmailStr
     password:str
 
 app=FastAPI() 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5174"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 Tax_ids_String="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesString.csv"
 Tax_ids_BioGrid="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesBioGrid.csv"
 Tax_ids_Intact="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesIntact.csv"
@@ -208,84 +223,70 @@ def search(id_value:str,tax_id:str,from_database:str,selected_databases:Optional
 
     return result
 
+from pydantic import BaseModel
 
-@app.post("/signup")
-def sign_up(credentials:AuthCredentials):
-    try:
-        response=supabase.auth.sign_up({'email':credentials.email,'password':credentials.password})
-        return {"message":"SignUp successful, please verify your email"}
-    except:
-        raise HTTPException(status_code=400,detail="signup failed")
-
-@app.post("/login")
-def login(credentials:AuthCredentials):
-    try:
-        response=supabase.auth.sign_in_with_password({'email':credentials.email,'password':credentials.password})
-
-        return{
-            "access_token":response.session.access_token,
-            "token_type":"bearer",
-        }
-    except:
-        raise HTTPException(status_code=401,detail="Invalid Credentials")
-
-@app.get('/logout')
-def logout(authorization:str=Header(None)):
-    try:
-        token=authorization.split(" ")
-        supabase.auth.admin.sign_out(token[1])
-        return {"message":"Log Out successfully"}
-    except:
-        raise HTTPException(status_code=401,detail="Invalid Credentials")
+class DownloadRequest(BaseModel):
+    results: list
+    selected_databases: list[str]
+    selected_columns: list[str]
+    uniprot_id: str
+    tax_id: str
     
-@app.get('/deleteprofile')
-def delete_profile(current_user=Depends(get_optional_user)):
-    try:
-        supabase_admin.auth.admin.delete_user(current_user.id)
-        return {"message": "User deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=400,detail=str(e))
+@app.post("/mitab")
+def download_mitab(request: DownloadRequest):
+    final_columns = build_final_columns(request.selected_databases, request.selected_columns)
+    all_rows = []
+    
+    output = request.results[1]["output"]
 
-@app.get("/history")
-def get_history(current_user=Depends(get_optional_user)):
-    try:
-        response = (
-            supabase_admin
-            .table("history")
-            .select("searched_at,input_id,input_uniprot_id,taxonomy_id,choosen_databases,available_databases")
-            .eq("user_id",current_user.id)
-            .execute()
-        )
-    except:
-        raise HTTPException(status_code=401,detail="Login Required")
-    return response
+    for db_result in output:
+        db_name = list(db_result.keys())[0]
+        if db_name not in request.selected_databases:
+            continue
+        db_data = db_result[db_name]
+        if isinstance(db_data, str):
+            continue
 
-@app.delete("/history/delete/{history_id}")
-def delete_history(history_id:int,current_user=Depends(get_optional_user)):
-    if not current_user:
-        return {"message":"user not logged in"}
-    try:
-        response=supabase_admin.table("history").delete().eq("id",history_id).eq("user_id",current_user.id).execute()
-        if not response.data:
-            raise HTTPException(status_code=401,detail="Invalid Credentials")
-        return {"message":"History deleted successfully"}
-    except:
-        raise HTTPException(status_code=401,detail="Invalid Credentials")
-
-@app.post("/history/favourites/{history_id}")
-def set_favourite(history_id:int,current_user=Depends(get_optional_user)):
-    if not current_user:
-        return {"message":"user not logged in"}
-    try:
-        response=supabase_admin.table("history").select("is_favourite").eq("id",history_id).eq("user_id",current_user.id).execute()
-        if not response.data:
-            raise HTTPException(status_code=401,detail="Invalid Credentials")
-
-        if response.data[0]["is_favourite"]==True:
-            supabase_admin.table("history").update({"is_favourite":False}).eq("id", history_id).eq("user_id", current_user.id).execute()
-            return {"message":"Query removed as favourite"}
+        if db_name == "HuRI":
+            rows = populate_huri(db_data, final_columns, request.uniprot_id,request.selected_columns, request.tax_id)
+        elif db_name in DBs:
+            rows = DBs[db_name](db_data,final_columns,request.selected_columns,request.uniprot_id, request.tax_id)
         else:
-            supabase_admin.table("history").update({"is_favourite":True}).eq("id", history_id).eq("user_id", current_user.id).execute()
-            return {"message":"Query set as favourite"}
-    except:
-        raise HTTPException(status_code=401,detail="Invalid Credentials")
+            continue
+
+        all_rows.extend(rows)
+
+    tsv_lines = ["\t".join(final_columns)]
+    for row in all_rows:
+        line = "\t".join(str(row.get(col, "-")) for col in final_columns)
+        tsv_lines.append(line)
+    tsv_content = "\n".join(tsv_lines)
+    # return output
+    # return final_columns
+    return StreamingResponse(
+        io.StringIO(tsv_content),
+        media_type="text/tab-separated-values",
+        headers={"Content-Disposition": f"attachment; filename={request.uniprot_id}_interactions.mitab.txt"}
+    )
+
+@app.post("/parquet")
+def download_parquet(request: DownloadRequest):
+    rows = flatten_results(
+        request.results,
+        request.selected_databases
+    )
+    if not rows:
+        raise HTTPException(status_code=404,detail="No Data")
+    
+    df=pd.DataFrame(rows)
+    buffer=io.BytesIO()
+    df.to_parquet(buffer, index=False)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.apache.parquet",
+        headers={
+            "Content-Disposition":
+            f"attachment; filename={request.uniprot_id}.parquet"
+        }
+    )

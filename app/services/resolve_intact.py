@@ -81,7 +81,8 @@ def resolve_intact(input_id:str,tax_id:str):
         temp=len(raw_response_data[key]['confidence_value'])
         if key[0]==input_id:
            interactors.append({
-            "Interactor":key[1],
+            "Interactor_A":key[1],
+            "Interactor_B":key[0],
             "organism":taxon_id_to_name(raw_response_data[key]['TaxIdB']),
             "Num_Interaction_IntAct":raw_response_data[key]['num_interactions'],
             "Minimum_feature_count":min(raw_response_data[key]['feature_count']),
@@ -93,7 +94,8 @@ def resolve_intact(input_id:str,tax_id:str):
         })
         if key[1]==input_id:
            interactors.append({
-            "Interactor":key[0],
+            "Interactor_A":key[0],
+            "Interactor_B":key[1],
             "organism":taxon_id_to_name(raw_response_data[key]['TaxIdA']),
             "Num_Interaction_IntAct":raw_response_data[key]['num_interactions'],
             "Minimum_feature_count":min(raw_response_data[key]['feature_count']),

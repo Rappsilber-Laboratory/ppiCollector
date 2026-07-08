@@ -24,7 +24,7 @@ def resolve_predictomes(input_id:str,tax_id:str):
             kirc_score:float=extraction_row['kirc_score'].values[0]
             num_unique_contacts:int=extraction_row['num_unique_contacts'].values[0]
 
-            interactors_list.append({"Interactor":UniprotId_B,"spoc_score":float(spoc_score),"kirc_score":float(kirc_score),"num_unique_contacts":int(num_unique_contacts),"Interactor_Link":f"https://predictomes.org/hp/?pid={UniprotId_B}"})
+            interactors_list.append({"Interactor_A":UniprotId_B,"Interactor_B":UniprotId_A,"spoc_score":float(spoc_score),"kirc_score":float(kirc_score),"num_unique_contacts":int(num_unique_contacts),"Interactor_Link":f"https://predictomes.org/hp/?pid={UniprotId_B}"})
 
         if(UniprotId_B==input_id):
             interactor=UniprotId_A
@@ -33,7 +33,7 @@ def resolve_predictomes(input_id:str,tax_id:str):
             spoc_score:float=extraction_row['spoc_score'].values[0]
             kirc_score:float=extraction_row['kirc_score'].values[0]
             num_unique_contacts:int=extraction_row['num_unique_contacts'].values[0]
-            interactors_list.append({"Interactor":UniprotId_A,"spoc_score":float(spoc_score),"kirc_score":float(kirc_score),"num_unique_contacts":int(num_unique_contacts),"Interactor_Link":f"https://predictomes.org/hp/?pid={UniprotId_A}"})
+            interactors_list.append({"Interactor_A":UniprotId_A,"Interactor_B":UniprotId_B,"spoc_score":float(spoc_score),"kirc_score":float(kirc_score),"num_unique_contacts":int(num_unique_contacts),"Interactor_Link":f"https://predictomes.org/hp/?pid={UniprotId_A}"})
 
         i+=1
     

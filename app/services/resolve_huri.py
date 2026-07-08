@@ -23,7 +23,7 @@ def resolve_HuRI(input_id:str,tax_id:str):
     while(i<rows):
         if(df.loc[i,'interactorA']==input_id):
             if(df.loc[i,'interactorB']!=input_id):
-                interactors.append({'Interactor':get_job_id(df.loc[i,'interactorB'],'Ensembl',tax_id),'Interactor_Link':f"https://interactome-atlas.org/search/{df.loc[i,'interactorB']}"})
+                interactors.append({'Interactor_A':df.loc[i,'interactorB'],'Interactor_B':df.loc[i,'interactorA'],'Interactor_Link':f"https://interactome-atlas.org/search/{df.loc[i,'interactorB']}"})
         i+=1
     interactions.append({"Interactions":interactors})
     return interactions

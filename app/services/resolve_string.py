@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 import requests
 import time
+from app.services.convert_input_to_uniprotKB import get_job_id
+import pandas as pd
 
 URL="https://version-12-0.string-db.org/api"
 OUTPUT_FORMAT="json"
@@ -36,12 +38,16 @@ def get_string_interactions(input_id:str,tax_id:str):
             payload_get_link={'species':data['ncbiTaxonId'],'identifiers':data['preferredName_B']}
             result_get_link=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",data=payload_get_link)
             result_get_link_json=result_get_link.json()
-            direct_interactors.append({"Interactor":data['preferredName_B'],"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link":result_get_link_json})
+            Interactor_A=(data['preferredName_B'])
+            Interactor_B=(data['preferredName_A'])
+            direct_interactors.append({"Interactor_A":Interactor_A,"Interactor_B":Interactor_B,"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link":result_get_link_json})
         if(data['stringId_B']==string_id):
             payload_get_link={'species':data['ncbiTaxonId'],'identifiers':data['preferredName_A']}
             result_get_link=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",data=payload_get_link)
-            result_get_link_json=result_get_link.json()  
-            direct_interactors.append({"Interactor":data['preferredName_A'],"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link":result_get_link_json})
+            result_get_link_json=result_get_link.json()
+            Interactor_A=(data['preferredName_A'])
+            Interactor_B=(data['preferredName_B'])
+            direct_interactors.append({"Interactor_A":Interactor_A,"Interactor_B":Interactor_B,"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link":result_get_link_json})
         else:
             payload_get_link_A={'species':data['ncbiTaxonId'],'identifiers':data['preferredName_A']}
             result_get_link_A=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",data=payload_get_link_A)
@@ -51,11 +57,15 @@ def get_string_interactions(input_id:str,tax_id:str):
             result_get_link_B=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",data=payload_get_link_B)
             result_get_link_json_B=result_get_link_B.json()
 
-            indirect_interactors.append({"Interactor_A":data["preferredName_A"],"Interactor_B":data["preferredName_B"],"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link_A":result_get_link_json_A,"Interactor_Link_B":result_get_link_json_B})
+            Interactor_A=(data['preferredName_A'])
+            Interactor_B=(data['preferredName_B'])
+
+            indirect_interactors.append({"Interactor_A":Interactor_A,"Interactor_B":Interactor_B,"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link_A":result_get_link_json_A,"Interactor_Link_B":result_get_link_json_B})
 
     interactions.append({"Direct_Interactions":direct_interactors})
 
     interactions.append({"Indirect_Interactions":indirect_interactors})
+
     return interactions
 
 
