@@ -10,7 +10,6 @@ from app.services.resolve_biogrid import resolve_biogrid
 from app.services.resolve_corum import resolve_corum
 from app.services.resolve_huri import resolve_HuRI
 from app.services.convert_input_to_ensembl import convert_to_ensemble
-from app.supabase_client import supabase
 import pandas as pd
 
 from app.services.select_columns_mitab import build_final_columns
@@ -19,9 +18,7 @@ from app.services.toParquet import flatten_results
 
 from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel,EmailStr
-from app.supabase_client import supabase,supabase_admin
 
-from app.dependencies import get_optional_user
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -90,61 +87,10 @@ i=0
 huri_ids=set()
 while(i<rows):
     huri_ids.add(str(df_huri.loc[i,'Taxon_id']))
-    i+=1
-
-@app.get("/")
-def home(current_user=Depends(get_optional_user)):
-    response=supabase_admin.table("history").select("available_databases,choosen_databases,input_uniprot_id,taxonomy_id").execute()
-
-    df=pd.DataFrame(response.data)
-    stats={}
-    (rows,colums)=df.shape
-    if(rows==0):
-        return stats
-    stats["Total Number of Queries"]=rows
-
-    available_database_count={"IntAct":0,"BioGrid":0,"Corum":0,"String":0,"HuRI":0,"Predictomes":0}
-    i=0
-    while i<rows:
-        for db in df.loc[i,"available_databases"]:
-            available_database_count[db]+=1
-        i+=1
-
-    queried_databases_count={"IntAct":0,"BioGrid":0,"Corum":0,"String":0,"HuRI":0,"Predictomes":0}
-    i=0
-    while i<rows:
-        for db in df.loc[i,"choosen_databases"]:
-            queried_databases_count[db]+=1
-        i+=1
-
-    databases_usage={}
-    for db in queried_databases_count:
-        if(available_database_count[db]==0):
-            databases_usage[db]=0
-        else:
-            databases_usage[db]=round(queried_databases_count[db]/available_database_count[db]*100)
-
-    sorted_usage=dict(sorted(databases_usage.items(),key=lambda x: x[1],reverse=True))
-    
-    stats["Most_Queried_Databases"]=sorted_usage
-
-   
-    trending_proteins={}
-    
-    i=0
-    while i<rows:
-        if df.loc[i,"input_uniprot_id"] not in trending_proteins :
-            trending_proteins[df.loc[i,"input_uniprot_id"]]=1
-        else:
-            trending_proteins[df.loc[i,"input_uniprot_id"]]+=1
-        i+=1
-    trending_proteins = dict(sorted(trending_proteins.items(),key=lambda x: x[1],reverse=True))
-    top5=dict(list(trending_proteins.items())[:5])
-    stats["Trending Proteins"]=top5
-    return stats            
+    i+=1           
             
 @app.get("/search")
-def search(id_value:str,tax_id:str,from_database:str,selected_databases:Optional[List[str]]=Query(default=None),current_user=Depends(get_optional_user)):
+def search(id_value:str,tax_id:str,from_database:str,selected_databases:Optional[List[str]]=Query(default=None)):
     uniprotkb_id=get_job_id(id_value,from_database,tax_id)
     if(not uniprotkb_id):
         raise HTTPException(status_code=404,detail="valid entry not found")
@@ -210,16 +156,6 @@ def search(id_value:str,tax_id:str,from_database:str,selected_databases:Optional
             output.append({key:selected_databases_dict[key]})
 
     result.append({"output":output})
-
-    if current_user:
-        supabase_admin.table('history').insert({
-            "user_id":current_user.id,
-            "input_id":id_value,
-            "input_uniprot_id":uniprotkb_id,
-            "taxonomy_id":tax_id,
-            "available_databases":list(available_databases),
-            "choosen_databases":list(selected_databases)
-        }).execute()
 
     return result
 
