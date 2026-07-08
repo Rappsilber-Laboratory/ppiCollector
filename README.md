@@ -1,4 +1,4 @@
-# ppiCollector
+# ClinkPPI
 Combining different ppi databases
 ClinkPPI is a Protein Protein Interaction Databases integerator. The aim was to solve a problem with the current proteomics databases, which was that there currently exists a wide landscape of protein interaction databases, where some are specialised for certain species(ex. Predictomes and HuRI for humand),some contain large number of species(ex. STRING,BioGrid), while some are protein complex databases(ex. CORUM). Our solution was to include 6 databases i.e STRING,CORUM,IntAct,BioGrid,HuRI and Predictomes into a unified web page dispalying all the information of these databases in a highly customisable and downloadable manner.
 
