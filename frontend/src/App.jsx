@@ -83,7 +83,7 @@ function App() {
             <SearchSection setresults={setresults} />
 
             {results && (
-                    <div className="max-w-6xl mx-auto px-6 py-10">
+                    <div className="w-full max-w-[90rem] mx-auto px-6 py-10">
 
                     <InputSummary input={results[0].Input} />
 

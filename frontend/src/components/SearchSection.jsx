@@ -60,16 +60,9 @@ const SearchSection = ({setresults}) => {
   return (
     <div>
       <section className="bg-slate-200 py-20 px-6">
-      <div className="max-w-3xl mx-auto text-center">
-        <h1 className="text-4xl font-bold mb-4 italic font-sans">
-          Search for a Protein
-        </h1>
-        <p className="text-gray-500 mb-10 text-lg italic">
-        Get Detailed Data of Interactions with your Queried Protein
-        </p>
-
-        <div className="bg-white shadow-md p-8 flex flex-col gap-4">
-        
+      <div className="w-full max-w-[90rem] mx-auto">
+        <div className="bg-white shadow-md rounded-2xl p-8 grid gap-8 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] lg:items-start">
+        <div className="flex flex-col gap-4">
         <label className='font-bold text-left'>Select Your Databases:</label>
 
         <div className="space-y-2">
@@ -126,8 +119,10 @@ const SearchSection = ({setresults}) => {
         />
         Predictomes
         </label>
-    </div>
+        </div>
+        </div>
         
+        <div className="flex flex-col gap-4">
     <label className='font-bold text-left'>Select Your Input Type</label>
         <select
             value={from_database}
@@ -158,25 +153,27 @@ const SearchSection = ({setresults}) => {
             className="border border-gray-300  px-4 py-3 text-gray-700 focus:outline-none focus:ring-2"
           />
 
-          <button
-            onClick={handleSearch}
-            className="bg-blue-900 text-white py-3  font-semibold hover:bg-blue-600 transition w-1/3"
-          >
-            Search
-          </button>
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+            <button
+              onClick={handleSearch}
+              className="bg-blue-900 text-white py-3 px-6 font-semibold hover:bg-blue-600 transition sm:min-w-40"
+            >
+              Search
+            </button>
 
-          <button
-            onClick={handleCancel}
-            className="bg-gray-800 text-white py-3  font-semibold hover:bg-gray-600 transition w-1/3 "
-          >
-            Cancel
-          </button>
+            <button
+              onClick={handleCancel}
+              className="bg-gray-800 text-white py-3 px-6 font-semibold hover:bg-gray-600 transition sm:min-w-40"
+            >
+              Cancel
+            </button>
+          </div>
           {loading && (
-          <div className=" text-center">
+          <div className="text-center lg:text-left">
             <p className="text-blue-900 font-semibold mb-3">Searching databases...</p>
             <div className="flex flex-col gap-2">
               {(selected_databases.length > 0 ? selected_databases:['String', 'IntAct', 'BioGrid', 'Corum', 'Predictomes', 'HuRI']).map(db => (
-                <div key={db} className="flex items-center gap-2 text-gray-600 justify-center">
+                <div key={db} className="flex items-center gap-2 text-gray-600 justify-center lg:justify-start">
                     <div className="animate-pulse w-2 h-2  bg-blue-900"></div>
                     Searching {db}...
                 </div>
@@ -185,6 +182,7 @@ const SearchSection = ({setresults}) => {
         </div>
           )}
         </div>
+      </div>
       </div>
     </section>
     </div>
