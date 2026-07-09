@@ -7,3 +7,8 @@ Data/
 *.txt
 test*.py
 Data
+*.html
+*.tsv
+*.node
+*.cjs
+frontend/node_modules/
