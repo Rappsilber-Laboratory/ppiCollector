@@ -1,6 +1,6 @@
 import io
 from typing import List, Optional
-from fastapi import FastAPI,HTTPException, Query,Depends,Header
+from fastapi import FastAPI,HTTPException, Query
 from fastapi.responses import StreamingResponse
 from app.services.convert_input_to_uniprotKB import get_job_id
 from app.services.resolve_string import get_string_interactions
@@ -10,13 +10,14 @@ from app.services.resolve_biogrid import resolve_biogrid
 from app.services.resolve_corum import resolve_corum
 from app.services.resolve_huri import resolve_HuRI
 from app.services.convert_input_to_ensembl import convert_to_ensemble
+from app.services.species_index import get_species_by_tax_id, get_supported_databases, resolve_species_name, search_species
+from app.services.uniprot_lookup import get_uniprot_taxonomy_id
 import pandas as pd
 
 from app.services.select_columns_mitab import build_final_columns
 from app.services.populate_mitab import DBs,populate_huri
 from app.services.toParquet import flatten_results
 
-from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel,EmailStr
 
 
@@ -30,124 +31,121 @@ class AuthCredentials(BaseModel):
 app=FastAPI() 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5174"],
+    allow_origins=["http://localhost:5174","http://127.0.0.1:5174"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-Tax_ids_String="../Supported_Organisms/AllSpeciesString.csv"
-Tax_ids_BioGrid="../Supported_Organisms/AllSpeciesBioGrid.csv"
-Tax_ids_Intact="../Supported_Organisms/AllSpeciesIntact.csv"
-Tax_ids_Corum="../Supported_Organisms/AllSpeciesCorum.csv"
-Tax_ids_Predictomes="../Supported_Organisms/AllSpeciesPredictomes.csv"
-Tax_ids_HuRI="../Supported_Organisms/AllSpeciesHuRI.csv"
 
-df_string=pd.read_csv(Tax_ids_String)
-(rows,colums)=df_string.shape
-i=0
-string_ids=set()
-while(i<rows):
-    string_ids.add(str(df_string.loc[i,'Taxon_id']))
-    i+=1
+@app.get("/species/search")
+def species_search(q:str="",limit:int=8):
+    safe_limit=max(1,min(limit,10))
+    return {"results":search_species(q,safe_limit)}
 
-df_intact=pd.read_csv(Tax_ids_Intact)
-(rows,colums)=df_intact.shape
-i=0
-intact_ids=set()
-while(i<rows):
-    intact_ids.add(str(df_intact.loc[i,'Taxon_id']))
-    i+=1
 
-df_biogrid=pd.read_csv(Tax_ids_BioGrid)
-(rows,colums)=df_biogrid.shape
-i=0
-biogrid_ids=set()
-while(i<rows):
-    biogrid_ids.add(str(df_biogrid.loc[i,'Taxon_id']))
-    i+=1
-
-df_predictomes=pd.read_csv(Tax_ids_Predictomes)
-(rows,colums)=df_predictomes.shape
-i=0
-predictomes_ids=set()
-while(i<rows):
-    predictomes_ids.add(str(df_predictomes.loc[i,'Taxon_id']))
-    i+=1
-
-df_corum=pd.read_csv(Tax_ids_Corum)
-(rows,colums)=df_corum.shape
-i=0
-corum_ids=set()
-while(i<rows):
-    corum_ids.add(str(df_corum.loc[i,'Taxon_id']))
-    i+=1
-
-df_huri=pd.read_csv(Tax_ids_HuRI)
-(rows,colums)=df_huri.shape
-i=0
-huri_ids=set()
-while(i<rows):
-    huri_ids.add(str(df_huri.loc[i,'Taxon_id']))
-    i+=1           
-            
 @app.get("/search")
-def search(id_value:str,tax_id:str,from_database:str,selected_databases:Optional[List[str]]=Query(default=None)):
-    uniprotkb_id=get_job_id(id_value,from_database,tax_id)
+def search(
+    id_value:str,
+    from_database:str,
+    tax_id:Optional[str]=None,
+    species_name:Optional[str]=None,
+    selected_databases:Optional[List[str]]=Query(default=None)
+):
+    resolved_species=None
+    resolved_tax_id=(tax_id or "").strip() or None
+    requested_species_name=(species_name or "").strip()
+
+    if resolved_tax_id:
+        resolved_species=get_species_by_tax_id(resolved_tax_id)
+        if resolved_species is None:
+            raise HTTPException(status_code=404,detail="Taxonomy ID is not supported by the configured organism list")
+    elif requested_species_name:
+        resolved_species=resolve_species_name(requested_species_name)
+        if resolved_species is None:
+            species_matches=search_species(requested_species_name,limit=5)
+            if species_matches:
+                raise HTTPException(status_code=400,detail="Species name is ambiguous. Please choose one of the suggestions or enter a taxonomy ID")
+            raise HTTPException(status_code=404,detail="Species name not found in the supported organism list")
+        resolved_tax_id=resolved_species["tax_id"]
+
+    uniprotkb_id=get_job_id(id_value,from_database,resolved_tax_id)
     if(not uniprotkb_id):
-        raise HTTPException(status_code=404,detail="valid entry not found")
-    available_databases=set()
-    if(tax_id in string_ids):
-        available_databases.add("String")
+        context_details = []
+        if requested_species_name:
+            context_details.append(f"species '{requested_species_name}'")
+        if resolved_tax_id:
+            context_details.append(f"taxonomy ID '{resolved_tax_id}'")
 
-    if(tax_id in intact_ids):
-        available_databases.add("IntAct")
+        if from_database == "Gene_Name":
+            if context_details:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Gene name '{id_value}' could not be resolved to a UniProtKB entry for {' and '.join(context_details)}",
+                )
+            raise HTTPException(
+                status_code=404,
+                detail=f"Gene name '{id_value}' could not be resolved to a UniProtKB entry. Try adding a species name or taxonomy ID",
+            )
 
-    if(tax_id in biogrid_ids):
-        available_databases.add("BioGrid")
+        if context_details:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Input '{id_value}' could not be resolved from {from_database} for {' and '.join(context_details)}",
+            )
 
-    if(tax_id in predictomes_ids):
-        available_databases.add("Predictomes")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Input '{id_value}' could not be resolved from {from_database}",
+        )
 
-    if(tax_id in corum_ids):
-        available_databases.add("Corum")
-    
-    if(tax_id in huri_ids):
-        available_databases.add("HuRI")
+    if resolved_tax_id is None:
+        resolved_tax_id=get_uniprot_taxonomy_id(uniprotkb_id)
+        if resolved_tax_id is None:
+            raise HTTPException(status_code=400,detail="Could not infer a taxonomy ID from the input. Please provide a species name or taxonomy ID")
+        resolved_species=get_species_by_tax_id(resolved_tax_id)
+
+    available_databases=get_supported_databases(resolved_tax_id)
 
     selected_databases_dict={}
     result=[]
-    result.append({"Input":{"UniProtId":uniprotkb_id,"TaxonomyId":tax_id}})
+    result.append({
+        "Input":{
+            "UniProtId":uniprotkb_id,
+            "TaxonomyId":resolved_tax_id,
+            "SpeciesName":resolved_species["display_name"] if resolved_species else requested_species_name
+        }
+    })
     output=[]
     if(selected_databases is None):
         for db in available_databases:
             if(db=="String"):
-                selected_databases_dict["String"]=get_string_interactions(uniprotkb_id,tax_id)
+                selected_databases_dict["String"]=get_string_interactions(uniprotkb_id,resolved_tax_id)
             if(db=="IntAct"):
-                selected_databases_dict["IntAct"]=resolve_intact(uniprotkb_id,tax_id)
+                selected_databases_dict["IntAct"]=resolve_intact(uniprotkb_id,resolved_tax_id)
             if(db=="Corum"):
-                selected_databases_dict["Corum"]=resolve_corum(uniprotkb_id,tax_id)
+                selected_databases_dict["Corum"]=resolve_corum(uniprotkb_id,resolved_tax_id)
             if(db=="Predictomes"):
-                selected_databases_dict["Predictomes"]=resolve_predictomes(uniprotkb_id,tax_id)
+                selected_databases_dict["Predictomes"]=resolve_predictomes(uniprotkb_id,resolved_tax_id)
             if(db=="BioGrid"):
-                selected_databases_dict["BioGrid"]=resolve_biogrid(uniprotkb_id,tax_id)
+                selected_databases_dict["BioGrid"]=resolve_biogrid(uniprotkb_id,resolved_tax_id)
             if(db=="HuRI"):
                 ensembl_id=convert_to_ensemble(uniprotkb_id)
-                selected_databases_dict["HuRI"]=resolve_HuRI(ensembl_id,tax_id)
+                selected_databases_dict["HuRI"]=resolve_HuRI(ensembl_id,resolved_tax_id)
     else:
         for db in selected_databases:
             if(db in available_databases):
                 if(db=="String"):
-                    selected_databases_dict["String"]=get_string_interactions(uniprotkb_id,tax_id)
+                    selected_databases_dict["String"]=get_string_interactions(uniprotkb_id,resolved_tax_id)
                 if(db=="IntAct"):
-                    selected_databases_dict["IntAct"]=resolve_intact(uniprotkb_id,tax_id)
+                    selected_databases_dict["IntAct"]=resolve_intact(uniprotkb_id,resolved_tax_id)
                 if(db=="Corum"):
-                    selected_databases_dict["Corum"]=resolve_corum(uniprotkb_id,tax_id)
+                    selected_databases_dict["Corum"]=resolve_corum(uniprotkb_id,resolved_tax_id)
                 if(db=="Predictomes"):
-                    selected_databases_dict["Predictomes"]=resolve_predictomes(uniprotkb_id,tax_id)
+                    selected_databases_dict["Predictomes"]=resolve_predictomes(uniprotkb_id,resolved_tax_id)
                 if(db=="BioGrid"):
-                    selected_databases_dict["BioGrid"]=resolve_biogrid(uniprotkb_id,tax_id)
+                    selected_databases_dict["BioGrid"]=resolve_biogrid(uniprotkb_id,resolved_tax_id)
                 if(db=="HuRI"):
                     ensembl_id=convert_to_ensemble(uniprotkb_id)
-                    selected_databases_dict["HuRI"]=resolve_HuRI(ensembl_id,tax_id)
+                    selected_databases_dict["HuRI"]=resolve_HuRI(ensembl_id,resolved_tax_id)
             else:
                 output.append({db:f"{db} does not have interactions for the given Input_id"})
     
@@ -158,8 +156,6 @@ def search(id_value:str,tax_id:str,from_database:str,selected_databases:Optional
     result.append({"output":output})
 
     return result
-
-from pydantic import BaseModel
 
 class DownloadRequest(BaseModel):
     results: list
