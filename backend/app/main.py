@@ -11,6 +11,7 @@ from app.services.resolve_corum import resolve_corum
 from app.services.resolve_huri import resolve_HuRI
 from app.services.convert_input_to_ensembl import convert_to_ensemble
 from app.services.species_index import get_species_by_tax_id, get_supported_databases, resolve_species_name, search_species
+from app.services.uniprot_gene_search import search_gene_name_candidates
 from app.services.uniprot_lookup import get_uniprot_taxonomy_id
 import pandas as pd
 
@@ -36,20 +37,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/species/search")
-def species_search(q:str="",limit:int=8):
-    safe_limit=max(1,min(limit,10))
-    return {"results":search_species(q,safe_limit)}
 
-
-@app.get("/search")
-def search(
-    id_value:str,
-    from_database:str,
-    tax_id:Optional[str]=None,
-    species_name:Optional[str]=None,
-    selected_databases:Optional[List[str]]=Query(default=None)
-):
+def resolve_species_context(tax_id: Optional[str], species_name: Optional[str]):
     resolved_species=None
     resolved_tax_id=(tax_id or "").strip() or None
     requested_species_name=(species_name or "").strip()
@@ -66,6 +55,48 @@ def search(
                 raise HTTPException(status_code=400,detail="Species name is ambiguous. Please choose one of the suggestions or enter a taxonomy ID")
             raise HTTPException(status_code=404,detail="Species name not found in the supported organism list")
         resolved_tax_id=resolved_species["tax_id"]
+
+    return resolved_tax_id, requested_species_name, resolved_species
+
+@app.get("/species/search")
+def species_search(q:str="",limit:int=8):
+    safe_limit=max(1,min(limit,10))
+    return {"results":search_species(q,safe_limit)}
+
+
+@app.get("/gene-name/search")
+def gene_name_search(
+    query:str,
+    tax_id:Optional[str]=None,
+    species_name:Optional[str]=None,
+    limit:int=8,
+):
+    resolved_tax_id, requested_species_name, resolved_species = resolve_species_context(tax_id, species_name)
+    if resolved_tax_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Gene name lookup requires a species name or taxonomy ID",
+        )
+
+    safe_limit=max(1,min(limit,10))
+    candidates=search_gene_name_candidates(query.strip(), resolved_tax_id, safe_limit)
+    return {
+        "query": query,
+        "tax_id": resolved_tax_id,
+        "species_name": resolved_species["display_name"] if resolved_species else requested_species_name,
+        "candidates": candidates,
+    }
+
+
+@app.get("/search")
+def search(
+    id_value:str,
+    from_database:str,
+    tax_id:Optional[str]=None,
+    species_name:Optional[str]=None,
+    selected_databases:Optional[List[str]]=Query(default=None)
+):
+    resolved_tax_id, requested_species_name, resolved_species = resolve_species_context(tax_id, species_name)
 
     uniprotkb_id=get_job_id(id_value,from_database,resolved_tax_id)
     if(not uniprotkb_id):

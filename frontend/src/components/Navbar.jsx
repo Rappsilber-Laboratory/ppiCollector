@@ -4,7 +4,7 @@ import klink from '../assets/klink.png'
 const Navbar = () => {
   return (
     <nav className="bg-slate-200 px-6 py-6">
-      <div className="mx-auto grid w-full max-w-[90rem] grid-cols-[auto_1fr_auto] items-center gap-4">
+      <div className="mx-auto grid w-full max-w-[110rem] grid-cols-[auto_1fr_auto] items-center gap-4">
         <img
           src={klink}
           alt="Klink Pokemon"
