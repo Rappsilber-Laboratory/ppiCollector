@@ -1,42 +1,108 @@
-# ClinkPPI
-Combining different ppi databases
-ClinkPPI is a Protein Protein Interaction Databases integerator. The aim was to solve a problem with the current proteomics databases, which was that there currently exists a wide landscape of protein interaction databases, where some are specialised for certain species(ex. Predictomes and HuRI for humand),some contain large number of species(ex. STRING,BioGrid), while some are protein complex databases(ex. CORUM). Our solution was to include 6 databases i.e STRING,CORUM,IntAct,BioGrid,HuRI and Predictomes into a unified web page dispalying all the information of these databases in a highly customisable and downloadable manner.
+# KlinkPPI
 
-Search Bar
-1. Allowing the users to selected the databases to get the results from.
-2. Accepting UniProtKb,Ensembl GeneID and Gene Name as inputs.
-3. Allows the user to input the Taxonomy ID of the input, which makes our search after.
+KlinkPPI is a web application for exploring protein-protein interaction (PPI) data across multiple sources from one interface. It combines results from `STRING`, `CORUM`, `IntAct`, `BioGRID`, `HuRI`, and `Predictomes`, then lets users inspect and download the results in `PSI-MI TAB 2.8` or `Parquet` format.
 
-## Search Bar
+## Features
+
+- Search by `UniProtKB`, `GeneID`, `Ensembl`, or `Gene Name`
+- Filter queries by taxonomy ID
+- Query one database or several at once
+- Review results in separate sections by database
+- Download selected results as `MI TAB` or `Parquet`
+
+## Screenshots
+
+### Search
 
 ![Search Bar](screenshots_for_readme/search.png)
 
-Results Page
-1. The results are sepeartated by the selected databases.
-2. The results contain the important columns specific to the database sorted in descenign order.
-3. the 'i' button helps to get description regarding the column.
-4. The 'Link' column redirects the user to the interactor searched in that specific database
-5. 20 interactions are shown in one go and can be expanded to see all the interactions.
-6. For the databases that dont have any information we show clear information about the non existence of data in the database.
-
+### Results
 
 ![Search Summary](screenshots_for_readme/search_summary.png)
-
 ![Sample Result 1](screenshots_for_readme/sample_result.png)
 ![Sample Result 2](screenshots_for_readme/sample_result_2.png)
-
 ![Data dne](screenshots_for_readme/dne.png)
 
-Downloading the Data
-1. We allow the users to allow data in the a highly customisable manner in the PSI-MI TAB 2.8 Format, which is the standard format used by the community and is a tab seperated format .
-2. We allow the users to pick and choose which specific columns does the user want from each database, allowing a highly customisable MI TAB file thereby making the file even more humand readable.
-3. Apache Parquet file has also been incorporated as the TAB file can get extremely complex and large for 1000s of interactions therefore we have implements the binary parquet file format as well. This format can also be used for machine learning and other secondary analysis.
-
+### Downloads
 
 ![MI TAB](screenshots_for_readme/download_results.png)
-
 ![Parquet](screenshots_for_readme/download_results_2.png)
-
 ![Downloaded MI TAB](screenshots_for_readme/mitab.png)
+![Downloaded Parquet](screenshots_for_readme/parquet.png)
 
-![Downloaded  Parquet](screenshots_for_readme/parquet.png)
+## Project Structure
+
+- `backend/`: FastAPI backend
+- `frontend/`: React + Vite frontend
+- `Data/`: local database files used by several backend resolvers
+- `Supported_Organisms/`: taxonomy support tables for each source
+
+## Prerequisites
+
+- `Python 3.11+` recommended
+- `Node.js 20.19+` or `22.12+`
+- `npm`
+
+`Node.js 18` is not sufficient for the current Vite version in this repository.
+
+## Installation
+
+Clone the repository and work from the project root:
+
+```bash
+git clone <your-repo-url>
+cd AggPPIplatform
+```
+
+Create a fresh Python virtual environment and install backend dependencies:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Install frontend dependencies:
+
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+## Running the Application
+
+Start the backend from the `backend/` directory:
+
+```bash
+source .venv/bin/activate
+cd backend
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Start the frontend in a second terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:5174
+```
+
+## Notes
+
+- The frontend is configured to talk to the backend at `http://127.0.0.1:8000`.
+- The backend CORS configuration currently allows `http://localhost:5174`.
+- Several backend resolvers call external services such as UniProt, Ensembl, STRING, and IntAct, so an internet connection is required for full functionality.
+- If `npm run dev` or `npm run build` fails after switching Node versions, remove stale dependencies and reinstall with `npm install`.
+
+## API Endpoints
+
+- `GET /search`
+- `POST /mitab`
+- `POST /parquet`
