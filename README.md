@@ -96,7 +96,7 @@ http://localhost:5174
 
 ## Notes
 
-- The frontend is configured to connect with the backend at `http://127.0.0.1:8000`.
+- The frontend is configured to connect with to the backend at `http://127.0.0.1:8000`.
 - The backend CORS configuration currently allows `http://localhost:5174`.
 - Several backend resolvers call external services such as UniProt, Ensembl, STRING, and IntAct, so an internet connection is required for full functionality.
 - If `npm run dev` or `npm run build` fails after switching Node versions, remove stale dependencies and reinstall with `npm install`.

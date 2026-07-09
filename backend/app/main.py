@@ -34,12 +34,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-Tax_ids_String="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesString.csv"
-Tax_ids_BioGrid="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesBioGrid.csv"
-Tax_ids_Intact="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesIntact.csv"
-Tax_ids_Corum="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesCorum.csv"
-Tax_ids_Predictomes="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesPredictomes.csv"
-Tax_ids_HuRI="/Users/sukrit/Desktop/AggPPIplatform/Supported_Organisms/AllSpeciesHuRI.csv"
+Tax_ids_String="Supported_Organisms/AllSpeciesString.csv"
+Tax_ids_BioGrid="Supported_Organisms/AllSpeciesBioGrid.csv"
+Tax_ids_Intact="Supported_Organisms/AllSpeciesIntact.csv"
+Tax_ids_Corum="Supported_Organisms/AllSpeciesCorum.csv"
+Tax_ids_Predictomes="Supported_Organisms/AllSpeciesPredictomes.csv"
+Tax_ids_HuRI="Supported_Organisms/AllSpeciesHuRI.csv"
 
 df_string=pd.read_csv(Tax_ids_String)
 (rows,colums)=df_string.shape

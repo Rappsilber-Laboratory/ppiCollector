@@ -1,7 +1,7 @@
 import pandas as pd
 
 def resolve_corum(input_id:str,tax_id:str):
-    df1=pd.read_csv("/Users/sukrit/Desktop/AggPPIplatform/Data/Corum/corum_uniprotCorumMapping.txt",sep="\t")
+    df1=pd.read_csv("../Data/Corum/corum_uniprotCorumMapping.txt",sep="\t")
     (rows,columns)=df1.shape
     i=0
     corum_id=""
@@ -12,7 +12,7 @@ def resolve_corum(input_id:str,tax_id:str):
     if(corum_id==""):
         return "this input does not exist in the Corum Database"
 
-    df=pd.read_json("/Users/sukrit/Desktop/AggPPIplatform/Data/Corum/corum_allComplexes.json")
+    df=pd.read_json("../Data/Corum/corum_allComplexes.json")
     (rows,columns)=df.shape
     i=3
     interactions=[]

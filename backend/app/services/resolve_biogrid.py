@@ -2,7 +2,7 @@ import pandas as pd
 import operator as op
 import requests
 URL1="https://rest.uniprot.org/taxonomy"
-df=pd.read_csv("/Users/sukrit/Desktop/AggPPIplatform/Data/BioGrid/BIOGRID-ALL-5.0.258.mitab.txt",sep="\t")
+df=pd.read_csv("../Data/BioGrid/BIOGRID-ALL-5.0.258.mitab.txt",sep="\t")
 
 def taxon_id_to_name(tax_id:str):
     tax_id_to_name_json=(requests.get(f"{URL1}/{tax_id}")).json()

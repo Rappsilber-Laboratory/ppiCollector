@@ -7,7 +7,7 @@ from app.services.convert_input_to_uniprotKB import get_job_id
 
 URL1="https://rest.uniprot.org/taxonomy"
 
-df=pd.read_csv("/Users/sukrit/Desktop/AggPPIplatform/Data/HuRI/HuRI.tsv",sep='\t',header=None)
+df=pd.read_csv("../Data/HuRI/HuRI.tsv",sep='\t',header=None)
 df.columns=['interactorA','interactorB']
 
 def taxon_id_to_name(tax_id:str):

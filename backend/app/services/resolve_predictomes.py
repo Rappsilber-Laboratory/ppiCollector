@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import pandas as pd
 # python3 resolve_predictomes.py
-df=pd.read_csv('/Users/sukrit/Desktop/AggPPIplatform/Data/Predictomes/Predictomes.csv')
+df=pd.read_csv('../Data/Predictomes/Predictomes.csv')
 def resolve_predictomes(input_id:str,tax_id:str):
     (rows,columns)=df.shape
     num_rows=rows
