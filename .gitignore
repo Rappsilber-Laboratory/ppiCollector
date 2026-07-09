@@ -11,4 +11,8 @@ Data
 *.tsv
 *.node
 *.cjs
+*.json
+*.js
+*.mjs
+*.mts
 frontend/node_modules/
