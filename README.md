@@ -35,7 +35,7 @@ KlinkPPI is a web application for exploring protein-protein interaction (PPI) da
 - `backend/`: FastAPI backend
 - `frontend/`: React + Vite frontend
 - `Data/`: local database files used by several backend resolvers
-- `Supported_Organisms/`: taxonomy support tables for each source
+- `../Supported_Organisms/`: taxonomy support tables for each source
 
 ## Prerequisites
 
@@ -43,7 +43,23 @@ KlinkPPI is a web application for exploring protein-protein interaction (PPI) da
 - `Node.js 20.19+` or `22.12+`
 - `npm`
 
-`Node.js 18` is not sufficient for the current Vite version in this repository.
+`Node.js 18` is not sufficient for the current Vite version in this repository. For installing the new one: 
+
+```bash
+# 1. Download and run the install script
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
+
+# 2. Load NVM into your current terminal session
+# (Try bashrc first; if you use zsh, replace with ~/.zshrc)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# 3. Verify installation
+nvm --version
+nvm install 20
+nvm use 20
+   
+```
 
 ## Installation
 
