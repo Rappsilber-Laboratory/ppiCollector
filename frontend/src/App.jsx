@@ -12,6 +12,14 @@ import IntactResults from './components/IntaActResults'
 import HuRiResults from './components/HuRiResults'
 import DownloadPanel from './components/DownloadPanel'
 
+const DATABASE_HEADER_COLORS = {
+    STRING: 'bg-sky-700',
+    BioGRID: 'bg-emerald-700',
+    IntAct: 'bg-fuchsia-700',
+    Predictomes: 'bg-indigo-700',
+    CORUM: 'bg-amber-700',
+    HuRI: 'bg-rose-700',
+}
 
 const getDBStatus = (dbData, key, interactorKey) => {
     if (!dbData) return 'not_selected'
@@ -25,10 +33,10 @@ const getDBStatus = (dbData, key, interactorKey) => {
 
 const NoResults = ({ dbName, reason }) => (
     <div className="bg-white rounded-2xl shadow-md mb-8 overflow-hidden">
-        <div className="bg-gray-400 px-6 py-4 flex justify-between items-center">
+        <div className={`${DATABASE_HEADER_COLORS[dbName] || 'bg-slate-600'} px-6 py-4 flex justify-between items-center`}>
             <div>
                 <h2 className="text-white text-lg font-semibold tracking-wide">{dbName}</h2>
-                <p className="text-white/50 text-xs mt-0.5">
+                <p className="text-white/80 text-xs mt-0.5">
                     {reason === 'not_supported' ? 'Organism not supported' : 'No data found'}
                 </p>
             </div>

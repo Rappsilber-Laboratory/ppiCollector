@@ -2,7 +2,6 @@ import DBHeader from './DBHeader'
 import DBTable from './DBTable'
 
 const PredictomesResults = ({ data }) => {
-    const info = data.Predictomes[0].info
     const Interactions = data.Predictomes[1].Interactors
 
     const headers = [
@@ -14,7 +13,7 @@ const PredictomesResults = ({ data }) => {
         { label: 'Link' }
     ]
 
-    const rows = Interactions.map((i, index) => (
+    const rows = Interactions.map((i) => (
         <>
             <td className="px-4 py-3 font-semibold text-indigo-700">{i.Interactor_A}</td>
             <td className="px-4 py-3 text-gray-700">{i.Interactor_Gene_Name || '-'}</td>
@@ -33,7 +32,7 @@ const PredictomesResults = ({ data }) => {
 
     return (
         <div className="bg-white  shadow-md mb-8 overflow-hidden">
-            <DBHeader name="Predictomes" subtitle="Structural proteome-wide interaction predictions" count={Interactions.length} color="bg-neutral-700" />
+            <DBHeader name="Predictomes" subtitle="Structural proteome-wide interaction predictions" count={Interactions.length} color="bg-indigo-700" />
             <div className="p-6">
     {Interactions.length > 0 ? (
         <DBTable headers={headers} rows={rows} />

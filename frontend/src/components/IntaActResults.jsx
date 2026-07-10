@@ -2,7 +2,6 @@ import DBHeader from './DBHeader'
 import DBTable from './DBTable'
 
 const IntActResults = ({ data }) => {
-    const info = data.IntAct[0].info
     const Interactions = data.IntAct[1].Interactions
 
     const headers = [
@@ -37,7 +36,7 @@ const IntActResults = ({ data }) => {
 
     return (
         <div className="bg-white  shadow-md mb-8 overflow-hidden">
-            <DBHeader name="IntAct" subtitle="Experimentally verified molecular interactions" count={Interactions.length} color="bg-slate-600 " />
+            <DBHeader name="IntAct" subtitle="Experimentally verified molecular interactions" count={Interactions.length} color="bg-fuchsia-700" />
             <div className="p-6">
     {Interactions.length > 0 ? (
         <DBTable headers={headers} rows={rows} />

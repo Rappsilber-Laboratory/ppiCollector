@@ -12,7 +12,6 @@ const scoreInfo = [
 ]
 
 const StringResults = ({ data }) => {
-    const info = data.String[0].info
     const DirectInteractions = data.String[1].Direct_Interactions
     const IndirectInteractions = data.String[2].Indirect_Interactions
     const [showIndirect, setshowIndirect] = useState(false)
@@ -186,12 +185,12 @@ const StringResults = ({ data }) => {
         <div className="bg-white  shadow-md mb-8 overflow-hidden">
 
             {/* Header */}
-            <div className="bg-slate-700 px-6 py-4 flex justify-between items-center">
+            <div className="bg-sky-700 px-6 py-4 flex justify-between items-center">
                 <div>
                     <h2 className="text-white text-xl font-bold">STRING</h2>
-                    <p className="text-blue-200 text-sm">Functional protein interaction network</p>
+                    <p className="text-white/80 text-sm">Functional protein interaction network</p>
                 </div>
-                <span className="bg-white text-blue-600 text-xs font-bold px-3 py-1 ">
+                <span className="bg-white text-sky-700 text-xs font-bold px-3 py-1 ">
                     {DirectInteractions.length} direct · {IndirectInteractions.length} indirect
                 </span>
             </div>

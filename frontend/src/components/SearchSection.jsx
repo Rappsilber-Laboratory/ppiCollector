@@ -415,7 +415,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('String')}
             onChange={handleDatabaseChange}
         />
-        <span className={`font-medium ${DATABASE_STYLES.String.label}`}>STRING</span>
+        <span className="font-medium text-slate-900">STRING</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -425,7 +425,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('IntAct')}
             onChange={handleDatabaseChange}
         />
-        <span className={`font-medium ${DATABASE_STYLES.IntAct.label}`}>IntAct</span>
+        <span className="font-medium text-slate-900">IntAct</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -435,7 +435,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('BioGrid')}
             onChange={handleDatabaseChange}
         />
-        <span className={`font-medium ${DATABASE_STYLES.BioGrid.label}`}>BioGRID</span>
+        <span className="font-medium text-slate-900">BioGRID</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -445,7 +445,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('Corum')}
             onChange={handleDatabaseChange}
         />
-        <span className={`font-medium ${DATABASE_STYLES.Corum.label}`}>CORUM</span>
+        <span className="font-medium text-slate-900">CORUM</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -455,7 +455,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('HuRI')}
             onChange={handleDatabaseChange}
         />
-        <span className={`font-medium ${DATABASE_STYLES.HuRI.label}`}>HuRI</span>
+        <span className="font-medium text-slate-900">HuRI</span>
         </label>
 
         <label className="flex items-center gap-2 mb-3">
@@ -465,7 +465,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('Predictomes')}
             onChange={handleDatabaseChange}
         />
-        <span className={`font-medium ${DATABASE_STYLES.Predictomes.label}`}>Predictomes</span>
+        <span className="font-medium text-slate-900">Predictomes</span>
         </label>
         </div>
         </div>
