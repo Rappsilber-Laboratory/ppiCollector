@@ -11,6 +11,8 @@ from app.services.resolve_corum import resolve_corum
 from app.services.resolve_huri import resolve_HuRI
 from app.services.convert_input_to_ensembl import convert_to_ensemble
 from app.services.species_index import get_species_by_tax_id, get_supported_databases, resolve_species_name, search_species
+from app.services.species_ppi_export import build_species_mitab, build_species_parquet
+from app.services.species_ppi_jobs import create_species_ppi_job, get_species_display_name, get_species_ppi_job, get_species_ppi_job_rows
 from app.services.uniprot_gene_search import search_gene_name_candidates
 from app.services.uniprot_lookup import get_uniprot_taxonomy_id
 import pandas as pd
@@ -28,6 +30,17 @@ from fastapi.middleware.cors import CORSMiddleware
 class AuthCredentials(BaseModel):
     email:EmailStr
     password:str
+
+
+class SpeciesPPIJobRequest(BaseModel):
+    tax_id: Optional[str] = None
+    species_name: Optional[str] = None
+    selected_databases: list[str]
+
+
+class SpeciesPPIDownloadRequest(BaseModel):
+    selected_databases: list[str]
+    selected_columns: list[str]
 
 app=FastAPI() 
 app.add_middleware(
@@ -86,6 +99,92 @@ def gene_name_search(
         "species_name": resolved_species["display_name"] if resolved_species else requested_species_name,
         "candidates": candidates,
     }
+
+
+@app.post("/species-ppi/jobs")
+def start_species_ppi_job(request: SpeciesPPIJobRequest):
+    resolved_tax_id, requested_species_name, resolved_species = resolve_species_context(
+        request.tax_id, request.species_name
+    )
+    if resolved_tax_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Complete species PPI search requires a species name or taxonomy ID",
+        )
+
+    if not request.selected_databases:
+        raise HTTPException(status_code=400, detail="Select at least one database")
+
+    species_label = (
+        resolved_species["display_name"]
+        if resolved_species
+        else get_species_display_name(resolved_tax_id, requested_species_name)
+    )
+    return create_species_ppi_job(resolved_tax_id, species_label, request.selected_databases)
+
+
+@app.get("/species-ppi/jobs/{job_id}")
+def get_species_ppi_job_status(job_id: str):
+    try:
+        return get_species_ppi_job(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Species PPI job not found")
+
+
+@app.post("/species-ppi/jobs/{job_id}/mitab")
+def download_species_mitab(job_id: str, request: SpeciesPPIDownloadRequest):
+    try:
+        summary, rows_by_db = get_species_ppi_job_rows(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Species PPI job not found")
+
+    if summary["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Species PPI job is not finished yet")
+
+    available_databases = [
+        db_name
+        for db_name, status in summary["database_statuses"].items()
+        if status["status"] == "completed"
+    ]
+    selected_databases = [db_name for db_name in request.selected_databases if db_name in available_databases]
+    if not selected_databases:
+        raise HTTPException(status_code=400, detail="No completed databases were selected for export")
+
+    buffer = build_species_mitab(rows_by_db, summary["tax_id"], selected_databases, request.selected_columns)
+    filename = f"{summary['species_name'].replace(' ', '_')}_{summary['tax_id']}_ppi.mitab.txt"
+    return StreamingResponse(
+        buffer,
+        media_type="text/tab-separated-values",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.post("/species-ppi/jobs/{job_id}/parquet")
+def download_species_parquet(job_id: str, request: SpeciesPPIDownloadRequest):
+    try:
+        summary, rows_by_db = get_species_ppi_job_rows(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Species PPI job not found")
+
+    if summary["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Species PPI job is not finished yet")
+
+    available_databases = [
+        db_name
+        for db_name, status in summary["database_statuses"].items()
+        if status["status"] == "completed"
+    ]
+    selected_databases = [db_name for db_name in request.selected_databases if db_name in available_databases]
+    if not selected_databases:
+        raise HTTPException(status_code=400, detail="No completed databases were selected for export")
+
+    buffer = build_species_parquet(rows_by_db, selected_databases)
+    filename = f"{summary['species_name'].replace(' ', '_')}_{summary['tax_id']}_ppi.parquet"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.apache.parquet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.get("/search")
