@@ -10,7 +10,47 @@ const STATUS_STYLES = {
     unsupported: 'bg-slate-200 text-slate-700',
     not_supported: 'bg-slate-200 text-slate-700',
     not_available: 'bg-violet-100 text-violet-800',
+    cancelled: 'bg-rose-100 text-rose-800',
     failed: 'bg-red-100 text-red-800',
+}
+
+const DATABASE_STYLES = {
+    String: {
+        chip: 'bg-sky-100 text-sky-800 border-sky-200',
+        accent: 'bg-sky-500',
+        label: 'text-sky-800',
+        surface: 'bg-sky-50 border-sky-200',
+    },
+    IntAct: {
+        chip: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+        accent: 'bg-fuchsia-500',
+        label: 'text-fuchsia-800',
+        surface: 'bg-fuchsia-50 border-fuchsia-200',
+    },
+    BioGrid: {
+        chip: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        accent: 'bg-emerald-500',
+        label: 'text-emerald-800',
+        surface: 'bg-emerald-50 border-emerald-200',
+    },
+    Corum: {
+        chip: 'bg-orange-100 text-orange-800 border-orange-200',
+        accent: 'bg-orange-500',
+        label: 'text-orange-800',
+        surface: 'bg-orange-50 border-orange-200',
+    },
+    HuRI: {
+        chip: 'bg-rose-100 text-rose-800 border-rose-200',
+        accent: 'bg-rose-500',
+        label: 'text-rose-800',
+        surface: 'bg-rose-50 border-rose-200',
+    },
+    Predictomes: {
+        chip: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+        accent: 'bg-indigo-500',
+        label: 'text-indigo-800',
+        surface: 'bg-indigo-50 border-indigo-200',
+    },
 }
 
 const SearchSection = ({setresults}) => {
@@ -24,6 +64,7 @@ const SearchSection = ({setresults}) => {
     const [geneCandidates,setgeneCandidates]=useState([])
     const [selectedGeneCandidate,setselectedGeneCandidate]=useState(null)
     const [speciesJob,setspeciesJob]=useState(null)
+    const [speciesLogOpen,setspeciesLogOpen]=useState(true)
     const [selected_databases,setselected_databases]=useState([])
     const [loading,setloading]=useState(false)
     const abortController = React.useRef(null)
@@ -295,6 +336,7 @@ const SearchSection = ({setresults}) => {
             }
 
             setspeciesJob(data)
+            setspeciesLogOpen(true)
         } catch (error) {
             if (error.name === 'AbortError') {
                 console.log('Search Cancelled')
@@ -307,7 +349,21 @@ const SearchSection = ({setresults}) => {
         }
     }
 
-    const handleCancel=()=>{
+    const handleCancel=async ()=>{
+      if (search_type === 'complete_species' && speciesJob?.job_id && speciesJob?.status === 'running') {
+          try {
+              const response = await fetch(`${API_BASE_URL}/species-ppi/jobs/${speciesJob.job_id}/cancel`, {
+                  method: 'POST',
+              })
+              const data = await response.json()
+              if (!response.ok) {
+                  throw new Error(data.detail || 'Failed to cancel complete species job')
+              }
+              setspeciesJob(data)
+          } catch (error) {
+              alert(error.message)
+          }
+      }
       if (abortController.current){
           abortController.current.abort()
       }
@@ -359,7 +415,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('String')}
             onChange={handleDatabaseChange}
         />
-        STRING
+        <span className={`font-medium ${DATABASE_STYLES.String.label}`}>STRING</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -369,7 +425,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('IntAct')}
             onChange={handleDatabaseChange}
         />
-        IntAct
+        <span className={`font-medium ${DATABASE_STYLES.IntAct.label}`}>IntAct</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -379,7 +435,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('BioGrid')}
             onChange={handleDatabaseChange}
         />
-        BioGRID
+        <span className={`font-medium ${DATABASE_STYLES.BioGrid.label}`}>BioGRID</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -389,7 +445,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('Corum')}
             onChange={handleDatabaseChange}
         />
-        CORUM
+        <span className={`font-medium ${DATABASE_STYLES.Corum.label}`}>CORUM</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -399,7 +455,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('HuRI')}
             onChange={handleDatabaseChange}
         />
-        HuRI
+        <span className={`font-medium ${DATABASE_STYLES.HuRI.label}`}>HuRI</span>
         </label>
 
         <label className="flex items-center gap-2 mb-3">
@@ -409,7 +465,7 @@ const SearchSection = ({setresults}) => {
             checked={selected_databases.includes('Predictomes')}
             onChange={handleDatabaseChange}
         />
-        Predictomes
+        <span className={`font-medium ${DATABASE_STYLES.Predictomes.label}`}>Predictomes</span>
         </label>
         </div>
         </div>
@@ -424,6 +480,7 @@ const SearchSection = ({setresults}) => {
                 setloading(false)
                 setresults(null)
                 setspeciesJob(null)
+                setspeciesLogOpen(true)
                 clearGeneCandidateState()
             }}
             className="border border-gray-300 px-4 py-3 text-gray-700 focus:outline-none focus:ring-2"
@@ -621,53 +678,75 @@ const SearchSection = ({setresults}) => {
 
       {search_type === 'complete_species' && speciesJob && (
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-md">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Complete Species PPI Log</h3>
+          <div className="rounded-2xl bg-slate-50 p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Complete Species PPI Summary</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Species: <span className="font-semibold text-slate-800">{speciesJob.species_name}</span>
+                  {' '}• Taxonomy ID: <span className="font-semibold text-slate-800">{speciesJob.tax_id}</span>
+                </p>
+              </div>
               <p className="text-sm text-slate-600">
-                Species: <span className="font-semibold text-slate-800">{speciesJob.species_name}</span>
-                {' '}• Taxonomy ID: <span className="font-semibold text-slate-800">{speciesJob.tax_id}</span>
+                Status:{' '}
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${STATUS_STYLES[speciesJob.status] || STATUS_STYLES.pending}`}>
+                  {speciesJob.status}
+                </span>
               </p>
             </div>
-            <p className="text-sm text-slate-600">
-              Status:{' '}
-              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${STATUS_STYLES[speciesJob.status] || STATUS_STYLES.pending}`}>
-                {speciesJob.status}
-              </span>
-            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(speciesJob.selected_databases || []).map(dbName => (
+                <span
+                  key={dbName}
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${DATABASE_STYLES[dbName]?.chip || 'bg-slate-100 text-slate-700 border-slate-200'}`}
+                >
+                  {dbName}
+                </span>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-3 py-3">Database</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Pairs</th>
-                  <th className="px-3 py-3">Log</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {Object.entries(speciesJob.database_statuses || {}).map(([dbName, status]) => (
-                  <tr key={dbName}>
-                    <td className="px-3 py-3 font-semibold text-slate-900">{dbName}</td>
-                    <td className="px-3 py-3 text-slate-700">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${STATUS_STYLES[status.status] || STATUS_STYLES.pending}`}>
-                        {status.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-slate-700">{status.pair_count}</td>
-                    <td className="px-3 py-3 text-slate-600">{status.message}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <button
+            type="button"
+            onClick={() => setspeciesLogOpen(!speciesLogOpen)}
+            className="mt-5 flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 text-left transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            <div>
+              <p className="font-semibold text-slate-900">Job Log</p>
+              <p className="text-sm text-slate-500">Open the database-by-database progress details</p>
+            </div>
+            <span className="text-2xl text-slate-500">{speciesLogOpen ? '−' : '+'}</span>
+          </button>
 
-          {speciesJob.available_databases?.length > 0 && (
-            <p className="mt-4 text-sm text-slate-600">
-              Finished databases: <span className="font-semibold text-slate-800">{speciesJob.available_databases.join(', ')}</span>
-            </p>
+          {speciesLogOpen && (
+            <div className="mt-5 flex flex-col gap-3">
+              {Object.entries(speciesJob.database_statuses || {}).map(([dbName, status]) => (
+                <div
+                  key={dbName}
+                  className={`rounded-2xl border p-4 ${DATABASE_STYLES[dbName]?.surface || 'border-slate-200 bg-slate-50'}`}
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-3 w-3 rounded-full ${DATABASE_STYLES[dbName]?.accent || 'bg-slate-400'}`}></div>
+                      <span className={`font-semibold ${DATABASE_STYLES[dbName]?.label || 'text-slate-800'}`}>{dbName}</span>
+                    </div>
+                    <span className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${STATUS_STYLES[status.status] || STATUS_STYLES.pending}`}>
+                      {status.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 text-sm text-slate-700 md:grid-cols-2 xl:grid-cols-3">
+                    <div>
+                      <span className="font-semibold text-slate-900">Pairs:</span> {status.pair_count}
+                    </div>
+                    <div className="md:col-span-1 xl:col-span-2">
+                      <span className="font-semibold text-slate-900">Log:</span> {status.message}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           {speciesJob.error && (
