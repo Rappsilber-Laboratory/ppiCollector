@@ -12,7 +12,7 @@ from app.services.resolve_huri import resolve_HuRI
 from app.services.convert_input_to_ensembl import convert_to_ensemble
 from app.services.species_index import get_species_by_tax_id, get_supported_databases, resolve_species_name, search_species
 from app.services.species_ppi_export import build_species_mitab, build_species_parquet
-from app.services.species_ppi_jobs import create_species_ppi_job, get_species_display_name, get_species_ppi_job, get_species_ppi_job_rows
+from app.services.species_ppi_jobs import cancel_species_ppi_job, create_species_ppi_job, get_species_display_name, get_species_ppi_job, get_species_ppi_job_rows
 from app.services.uniprot_gene_search import search_gene_name_candidates
 from app.services.uniprot_lookup import get_uniprot_taxonomy_id
 import pandas as pd
@@ -131,6 +131,14 @@ def get_species_ppi_job_status(job_id: str):
         raise HTTPException(status_code=404, detail="Species PPI job not found")
 
 
+@app.post("/species-ppi/jobs/{job_id}/cancel")
+def cancel_complete_species_job(job_id: str):
+    try:
+        return cancel_species_ppi_job(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Species PPI job not found")
+
+
 @app.post("/species-ppi/jobs/{job_id}/mitab")
 def download_species_mitab(job_id: str, request: SpeciesPPIDownloadRequest):
     try:
@@ -178,7 +186,10 @@ def download_species_parquet(job_id: str, request: SpeciesPPIDownloadRequest):
     if not selected_databases:
         raise HTTPException(status_code=400, detail="No completed databases were selected for export")
 
-    buffer = build_species_parquet(rows_by_db, selected_databases)
+    try:
+        buffer = build_species_parquet(rows_by_db, selected_databases)
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"Parquet export is unavailable: {exc}")
     filename = f"{summary['species_name'].replace(' ', '_')}_{summary['tax_id']}_ppi.parquet"
     return StreamingResponse(
         buffer,
@@ -342,7 +353,10 @@ def download_parquet(request: DownloadRequest):
     
     df=pd.DataFrame(rows)
     buffer=io.BytesIO()
-    df.to_parquet(buffer, index=False)
+    try:
+        df.to_parquet(buffer, index=False)
+    except ImportError as exc:
+        raise HTTPException(status_code=500,detail=f"Parquet export is unavailable: {exc}")
     buffer.seek(0)
     return StreamingResponse(
         buffer,

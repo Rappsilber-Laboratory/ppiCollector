@@ -12,6 +12,11 @@ import pandas as pd
 
 from app.services.resolve_corum import CORUM_COMPLEXES_DF
 from app.services.resolve_huri import HURI_DF
+from app.services.species_ppi_remote import (
+    SpeciesJobCancelled,
+    ensure_intact_species_bundle,
+    ensure_string_species_bundle,
+)
 from app.services.species_index import get_species_by_tax_id, get_supported_databases
 
 
@@ -19,7 +24,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 BIOGRID_SOURCE_PATH = PROJECT_ROOT / "Data" / "BioGrid" / "BIOGRID-ALL-5.0.258.mitab.txt"
 PREDICTOMES_SOURCE_PATH = PROJECT_ROOT / "Data" / "Predictomes" / "Predictomes.csv"
 
-SUPPORTED_COMPLETE_SPECIES_DATABASES = {"BioGrid", "Corum", "Predictomes", "HuRI"}
+SUPPORTED_COMPLETE_SPECIES_DATABASES = {"BioGrid", "Corum", "Predictomes", "HuRI", "String", "IntAct"}
 
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
@@ -113,6 +118,27 @@ def _mark_job_complete(job_id: str, success: bool, error: Optional[str] = None) 
         job["updated_at"] = _now_iso()
         if error:
             job["error"] = error
+
+
+def _mark_job_cancelled(job_id: str) -> None:
+    with JOBS_LOCK:
+        job = JOBS[job_id]
+        job["status"] = "cancelled"
+        job["updated_at"] = _now_iso()
+        job["error"] = "Species PPI job was cancelled"
+
+
+def _is_cancel_requested(job_id: str) -> bool:
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if job is None:
+            return True
+        return bool(job.get("cancel_requested"))
+
+
+def _raise_if_cancelled(job_id: str) -> None:
+    if _is_cancel_requested(job_id):
+        raise SpeciesJobCancelled("Species PPI job was cancelled")
 
 
 def _build_biogrid_species_rows(tax_id: str) -> list[dict]:
@@ -249,6 +275,7 @@ def _run_species_job(job_id: str) -> None:
 
     try:
         for db_name in selected_databases:
+            _raise_if_cancelled(job_id)
             if db_name not in supported_databases:
                 _set_job_status(
                     job_id,
@@ -270,7 +297,13 @@ def _run_species_job(job_id: str) -> None:
                 continue
 
             _set_job_status(job_id, db_name, status="running", message=f"{db_name} is processing")
-            rows = _build_species_database_rows(db_name, tax_id)
+            if db_name == "String":
+                rows = ensure_string_species_bundle(tax_id, cancel_requested=lambda: _is_cancel_requested(job_id))
+            elif db_name == "IntAct":
+                rows = ensure_intact_species_bundle(tax_id, cancel_requested=lambda: _is_cancel_requested(job_id))
+            else:
+                rows = _build_species_database_rows(db_name, tax_id)
+                _raise_if_cancelled(job_id)
 
             with JOBS_LOCK:
                 JOBS[job_id]["data"][db_name] = rows
@@ -280,10 +313,17 @@ def _run_species_job(job_id: str) -> None:
                 db_name,
                 status="completed",
                 message=f"{db_name} finished",
-                pair_count=len(rows),
+                pair_count=rows.get("pair_count", 0) if isinstance(rows, dict) else len(rows),
             )
 
         _mark_job_complete(job_id, success=True)
+    except SpeciesJobCancelled:
+        for db_name in selected_databases:
+            with JOBS_LOCK:
+                status = JOBS[job_id]["database_statuses"][db_name]["status"]
+            if status == "running" or status == "pending":
+                _set_job_status(job_id, db_name, status="cancelled", message="Cancelled", pair_count=0)
+        _mark_job_cancelled(job_id)
     except Exception as exc:
         _mark_job_complete(job_id, success=False, error=str(exc))
 
@@ -307,6 +347,7 @@ def create_species_ppi_job(tax_id: str, species_name: str, selected_databases: l
         "created_at": _now_iso(),
         "updated_at": _now_iso(),
         "error": None,
+        "cancel_requested": False,
     }
 
     with JOBS_LOCK:
@@ -356,7 +397,10 @@ def get_species_ppi_job_rows(job_id: str) -> tuple[dict, dict[str, list[dict]]]:
             "status": job["status"],
             "database_statuses": {key: dict(value) for key, value in job["database_statuses"].items()},
         }
-        data = {key: list(value) for key, value in job["data"].items()}
+        data = {
+            key: (dict(value) if isinstance(value, dict) else list(value))
+            for key, value in job["data"].items()
+        }
     return summary, data
 
 
@@ -365,3 +409,15 @@ def get_species_display_name(tax_id: str, species_name: str | None = None) -> st
     if species is not None:
         return species["display_name"]
     return species_name or tax_id
+
+
+def cancel_species_ppi_job(job_id: str) -> dict:
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if job is None:
+            raise KeyError(job_id)
+        if job["status"] in {"completed", "failed", "cancelled"}:
+            return get_species_ppi_job(job_id)
+        job["cancel_requested"] = True
+        job["updated_at"] = _now_iso()
+    return get_species_ppi_job(job_id)
