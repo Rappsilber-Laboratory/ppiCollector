@@ -3,6 +3,7 @@ import './App.css'
 import Navbar from './components/Navbar'
 import SearchSection from './components/SearchSection'
 import InputSummary from './components/InputSummary'
+import InteractionOverlapLog from './components/InteractionOverlapLog'
 import StringResults from './components/StringResults'
 import PredictomesResults from './components/PredictomesResults'
 import BioGridResults from './components/BioGridResults'
@@ -84,6 +85,8 @@ function App() {
 
             {results && (
                     <div className="w-full max-w-[110rem] mx-auto px-4 py-10 sm:px-6">
+
+                    <InteractionOverlapLog results={results} />
 
                     <InputSummary input={results[0].Input} />
 

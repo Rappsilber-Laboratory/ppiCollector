@@ -94,6 +94,12 @@ const SearchSection = ({setresults}) => {
                 throw new Error(data.detail || 'Search failed')
             }
 
+            if (data?.[0]?.Input) {
+                data[0].Input.OriginalInput = protein_id
+                data[0].Input.OriginalInputType = from_database
+                data[0].Input.ResolvedSearchId = idValue
+            }
+
             setresults(data)
             settax_id(data?.[0]?.Input?.TaxonomyId || '')
             setspecies_name(data?.[0]?.Input?.SpeciesName || species_name)
@@ -229,7 +235,7 @@ const SearchSection = ({setresults}) => {
 
   return (
     <div>
-      <section className="bg-slate-200 py-20 px-4 sm:px-6">
+      <section className="bg-slate-200 py-14 px-4 sm:px-6">
       <div className="w-full max-w-[110rem] mx-auto">
         <div className="bg-white shadow-md rounded-2xl p-8 grid gap-8 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)] lg:items-start">
         <div className="flex flex-col gap-4">
