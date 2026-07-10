@@ -83,6 +83,7 @@ def resolve_intact(input_id:str,tax_id:str):
            interactors.append({
             "Interactor_A":key[1],
             "Interactor_B":key[0],
+            "Interactor_Gene_Name":raw_response_data[key]['moleculeB'],
             "organism":taxon_id_to_name(raw_response_data[key]['TaxIdB']),
             "Num_Interaction_IntAct":raw_response_data[key]['num_interactions'],
             "Minimum_feature_count":min(raw_response_data[key]['feature_count']),
@@ -96,6 +97,7 @@ def resolve_intact(input_id:str,tax_id:str):
            interactors.append({
             "Interactor_A":key[0],
             "Interactor_B":key[1],
+            "Interactor_Gene_Name":raw_response_data[key]['moleculeA'],
             "organism":taxon_id_to_name(raw_response_data[key]['TaxIdA']),
             "Num_Interaction_IntAct":raw_response_data[key]['num_interactions'],
             "Minimum_feature_count":min(raw_response_data[key]['feature_count']),
@@ -107,4 +109,3 @@ def resolve_intact(input_id:str,tax_id:str):
         })
     interactions.append({"Interactions":interactors})
     return interactions
-

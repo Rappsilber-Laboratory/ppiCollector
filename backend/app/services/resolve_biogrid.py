@@ -37,6 +37,7 @@ def resolve_biogrid(input_id: str, tax_id: str):
             {
                 "Interactor_A": interactor["Interactor_A"],
                 "Interactor_B": interactor["Interactor_B"],
+                "Interactor_Gene_Name": interactor["Interactor_Gene_Name"] or None,
                 "organism": taxon_id_to_name(interactor["organism_tax_id"]),
                 "Interaction_Detection_Method": interactor["Interaction_Detection_Method"],
                 "Interaction_Type": interactor["Interaction_Type"],

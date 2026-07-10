@@ -8,6 +8,18 @@ import pandas as pd
 PREDICTOMES_DF = pd.read_csv("../Data/Predictomes/Predictomes.csv")
 PREDICTOMES_INDEX: dict[str, list[dict]] = defaultdict(list)
 
+
+def _extract_predictomes_gene_names(complex_name: str) -> tuple[str | None, str | None]:
+    parts = str(complex_name).split("__")
+    if len(parts) < 2:
+        return None, None
+
+    def normalize(value: str) -> str | None:
+        token = value.split("_", 1)[0].strip()
+        return token or None
+
+    return normalize(parts[0]), normalize(parts[1])
+
 for row in PREDICTOMES_DF.itertuples(index=False):
     interaction = row.uniprot_ids.split(":")
     if len(interaction) != 2:
@@ -15,9 +27,11 @@ for row in PREDICTOMES_DF.itertuples(index=False):
 
     uniprot_a = interaction[0].strip()
     uniprot_b = interaction[1].strip()
+    gene_name_a, gene_name_b = _extract_predictomes_gene_names(row.complex_name)
     entry_ab = {
         "Interactor_A": uniprot_b,
         "Interactor_B": uniprot_a,
+        "Interactor_Gene_Name": gene_name_b,
         "spoc_score": float(row.spoc_score),
         "kirc_score": float(row.kirc_score),
         "num_unique_contacts": int(row.num_unique_contacts),
@@ -26,6 +40,7 @@ for row in PREDICTOMES_DF.itertuples(index=False):
     entry_ba = {
         "Interactor_A": uniprot_a,
         "Interactor_B": uniprot_b,
+        "Interactor_Gene_Name": gene_name_a,
         "spoc_score": float(row.spoc_score),
         "kirc_score": float(row.kirc_score),
         "num_unique_contacts": int(row.num_unique_contacts),

@@ -9,6 +9,7 @@ import threading
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 BIOGRID_SOURCE_PATH = PROJECT_ROOT / "Data" / "BioGrid" / "BIOGRID-ALL-5.0.258.mitab.txt"
 BIOGRID_INDEX_PATH = PROJECT_ROOT / "Data" / "BioGrid" / "BIOGRID-ALL-5.0.258.sqlite3"
+BIOGRID_INDEX_SCHEMA_VERSION = "2"
 
 _INDEX_BUILD_LOCK = threading.Lock()
 
@@ -44,10 +45,38 @@ def _extract_confidence_score(raw_value: str) -> str:
     return raw_value
 
 
+def _extract_gene_name(raw_value: str) -> str:
+    for alias in (raw_value or "").split("|"):
+        if ":" not in alias:
+            continue
+        value = alias.split(":", 1)[1]
+        if "(" in value:
+            value = value.split("(", 1)[0]
+        value = value.strip()
+        if value:
+            return value
+    return ""
+
+
 def _index_is_current() -> bool:
     if not BIOGRID_INDEX_PATH.exists():
         return False
-    return BIOGRID_INDEX_PATH.stat().st_mtime >= BIOGRID_SOURCE_PATH.stat().st_mtime
+    if BIOGRID_INDEX_PATH.stat().st_mtime < BIOGRID_SOURCE_PATH.stat().st_mtime:
+        return False
+
+    try:
+        connection = sqlite3.connect(BIOGRID_INDEX_PATH)
+        try:
+            row = connection.execute(
+                "SELECT value FROM metadata WHERE key = ?",
+                ("schema_version",),
+            ).fetchone()
+        finally:
+            connection.close()
+    except sqlite3.Error:
+        return False
+
+    return row is not None and row[0] == BIOGRID_INDEX_SCHEMA_VERSION
 
 
 def _create_schema(connection: sqlite3.Connection) -> None:
@@ -60,6 +89,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             query_uniprot TEXT NOT NULL,
             interactor_a TEXT NOT NULL,
             interactor_b TEXT NOT NULL,
+            interactor_gene_name TEXT NOT NULL,
             organism_tax_id TEXT NOT NULL,
             interaction_detection_method TEXT NOT NULL,
             interaction_type TEXT NOT NULL,
@@ -84,12 +114,13 @@ def _flush_batch(connection: sqlite3.Connection, batch: list[tuple[str, ...]]) -
             query_uniprot,
             interactor_a,
             interactor_b,
+            interactor_gene_name,
             organism_tax_id,
             interaction_detection_method,
             interaction_type,
             confidence_score,
             interactor_biogrid_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         batch,
     )
@@ -143,12 +174,15 @@ def build_biogrid_index() -> None:
                 )
                 interaction_type = _extract_interaction_type(row["Interaction Types"])
                 confidence_score = _extract_confidence_score(row["Confidence Values"])
+                gene_name_a = _extract_gene_name(row["Aliases Interactor A"])
+                gene_name_b = _extract_gene_name(row["Aliases Interactor B"])
 
                 batch.append(
                     (
                         uniprot_a,
                         uniprot_b,
                         uniprot_a,
+                        gene_name_b,
                         tax_id_b,
                         detection_method,
                         interaction_type,
@@ -161,6 +195,7 @@ def build_biogrid_index() -> None:
                         uniprot_b,
                         uniprot_a,
                         uniprot_b,
+                        gene_name_a,
                         tax_id_a,
                         detection_method,
                         interaction_type,
@@ -179,6 +214,10 @@ def build_biogrid_index() -> None:
         connection.execute(
             "INSERT INTO metadata (key, value) VALUES (?, ?)",
             ("source_mtime", str(BIOGRID_SOURCE_PATH.stat().st_mtime)),
+        )
+        connection.execute(
+            "INSERT INTO metadata (key, value) VALUES (?, ?)",
+            ("schema_version", BIOGRID_INDEX_SCHEMA_VERSION),
         )
         connection.commit()
     finally:
@@ -209,6 +248,7 @@ def get_biogrid_interactions(input_id: str) -> list[dict]:
             SELECT
                 interactor_a,
                 interactor_b,
+                interactor_gene_name,
                 organism_tax_id,
                 interaction_detection_method,
                 interaction_type,
@@ -228,6 +268,7 @@ def get_biogrid_interactions(input_id: str) -> list[dict]:
             {
                 "Interactor_A": row["interactor_a"],
                 "Interactor_B": row["interactor_b"],
+                "Interactor_Gene_Name": row["interactor_gene_name"],
                 "organism_tax_id": row["organism_tax_id"],
                 "Interaction_Detection_Method": row["interaction_detection_method"],
                 "Interaction_Type": row["interaction_type"],

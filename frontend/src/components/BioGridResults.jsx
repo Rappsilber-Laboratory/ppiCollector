@@ -7,6 +7,7 @@ const BioGridResults = ({ data }) => {
 
     const headers = [
         { label: 'Interactor' },
+        { label: 'Gene Name' },
         { label: 'Organism' },
         { label: 'Detection Method', info: 'Experimental method used to detect the interaction' },
         { label: 'Interaction Type', info: 'Type of molecular interaction (physical, genetic etc.)' },
@@ -17,6 +18,7 @@ const BioGridResults = ({ data }) => {
     const rows = Interactions.map((i) => (
         <>
             <td className="px-4 py-3 font-semibold text-indigo-700">{i.Interactor_A}</td>
+            <td className="px-4 py-3 text-gray-700">{i.Interactor_Gene_Name || '-'}</td>
             <td className="px-4 py-3 text-gray-500 italic">{i.organism}</td>
             <td className="px-4 py-3 text-gray-600 text-xs">{i.Interaction_Detection_Method}</td>
             <td className="px-4 py-3">

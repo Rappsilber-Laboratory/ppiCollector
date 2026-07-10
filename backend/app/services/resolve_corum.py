@@ -69,6 +69,7 @@ def resolve_corum(input_id: str, tax_id: str):
             {
                 "Interactor_A": interactor_id,
                 "Interactor_B": input_id,
+                "Interactor_Gene_Name": _clean_value(swissprot.get("gene_name")),
                 "Organism": _clean_value(swissprot.get("organism")),
                 "Interactor_Link": f"https://mips.helmholtz-muenchen.de/corum/?query={interactor_id}",
             }

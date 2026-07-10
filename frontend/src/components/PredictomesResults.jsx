@@ -7,6 +7,7 @@ const PredictomesResults = ({ data }) => {
 
     const headers = [
         { label: 'Interactor' },
+        { label: 'Gene Name' },
         { label: 'SPOC Score', info: 'Structural prediction of co-complexed proteins score' },
         { label: 'KIRC Score', info: 'Kinase-substrate relationship confidence score' },
         { label: 'Unique Contacts', info: 'Number of unique residue contacts predicted' },
@@ -16,6 +17,7 @@ const PredictomesResults = ({ data }) => {
     const rows = Interactions.map((i, index) => (
         <>
             <td className="px-4 py-3 font-semibold text-indigo-700">{i.Interactor_A}</td>
+            <td className="px-4 py-3 text-gray-700">{i.Interactor_Gene_Name || '-'}</td>
             <td className="px-4 py-3">
                 <span className={`font-bold ${i.spoc_score >= 0.7 ? 'text-green-600' : i.spoc_score >= 0.5 ? 'text-yellow-600' : 'text-gray-600'}`}>
                     {i.spoc_score}

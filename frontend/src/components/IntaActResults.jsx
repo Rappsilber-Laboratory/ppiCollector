@@ -7,6 +7,7 @@ const IntActResults = ({ data }) => {
 
     const headers = [
         { label: 'Interactor' },
+        { label: 'Gene Name' },
         { label: 'Organism' },
         { label: '# Interactions', info: 'Total number of interactions recorded in IntAct' },
         { label: 'Interaction Score', info: 'MIscore — confidence score based on experimental evidence' },
@@ -18,6 +19,7 @@ const IntActResults = ({ data }) => {
     const rows = Interactions.map((i) => (
         <>
             <td className="px-4 py-3 font-semibold text-indigo-700">{i.Interactor_A}</td>
+            <td className="px-4 py-3 text-gray-700">{i.Interactor_Gene_Name || '-'}</td>
             <td className="px-4 py-3 text-gray-500 italic">{i.organism}</td>
             <td className="px-4 py-3 text-gray-600">{i.Num_Interaction_IntAct}</td>
             <td className="px-4 py-3">
