@@ -25,11 +25,6 @@ KlinkPPI is a web application for exploring protein-protein interaction (PPI) da
 ![Search Summary](imgs/search_summary.png)
 ![Sample Result 1](imgs/sample_result.png)
 
-### Downloads
-
-![MI TAB](imgs/download_results.png)
-![Parquet](imgs/download_results_2.png)
-
 ## Project Structure
 
 - `backend/`: FastAPI backend
