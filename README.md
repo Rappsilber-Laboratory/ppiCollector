@@ -18,7 +18,7 @@ KlinkPPI is a web application for exploring protein-protein interaction (PPI) da
 
 ### Search
 
-![Search Bar](imgs/intro.png)
+![Search Bar](imgs/search.png)
 
 ### Results
 
