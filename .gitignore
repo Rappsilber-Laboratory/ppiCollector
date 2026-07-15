@@ -15,4 +15,8 @@ Data
 *.js
 *.mjs
 *.mts
+!package.json
+!package-lock.json
+!scripts/
+!scripts/*.mjs
 frontend/node_modules/
