@@ -10,25 +10,25 @@ KlinkPPI is a web application for exploring protein-protein interaction (PPI) da
 - Review results in separate sections by database
 - Download selected results as `MI TAB` or `Parquet`
 
-## Screenshots
+## Examples
+
+### Intro
+
+![Search Bar](imgs/intro.png)
 
 ### Search
 
-![Search Bar](imgs/search.png)
+![Search Bar](imgs/intro.png)
 
 ### Results
 
 ![Search Summary](imgs/search_summary.png)
 ![Sample Result 1](imgs/sample_result.png)
-![Sample Result 2](imgs/sample_result_2.png)
-![Data dne](imgs/dne.png)
 
 ### Downloads
 
 ![MI TAB](imgs/download_results.png)
 ![Parquet](imgs/download_results_2.png)
-![Downloaded MI TAB](imgs/mitab.png)
-![Downloaded Parquet](imgs/parquet.png)
 
 ## Project Structure
 
