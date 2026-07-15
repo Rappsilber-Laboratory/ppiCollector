@@ -10,7 +10,11 @@ KlinkPPI is a web application for exploring protein-protein interaction (PPI) da
 - Review results in separate sections by database
 - Download selected results as `MI TAB` or `Parquet`
 
-## Screenshots
+## Examples
+
+### Intro
+
+![Search Bar](imgs/intro.png)
 
 ### Search
 
@@ -20,15 +24,6 @@ KlinkPPI is a web application for exploring protein-protein interaction (PPI) da
 
 ![Search Summary](imgs/search_summary.png)
 ![Sample Result 1](imgs/sample_result.png)
-![Sample Result 2](imgs/sample_result_2.png)
-![Data dne](imgs/dne.png)
-
-### Downloads
-
-![MI TAB](imgs/download_results.png)
-![Parquet](imgs/download_results_2.png)
-![Downloaded MI TAB](imgs/mitab.png)
-![Downloaded Parquet](imgs/parquet.png)
 
 ## Project Structure
 
@@ -70,37 +65,19 @@ git clone <your-repo-url>
 cd KlinkPPI
 ```
 
-Create a fresh Python virtual environment and install backend dependencies:
+Install the backend and frontend dependencies from the project root:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-Install frontend dependencies:
-
-```bash
-cd frontend
 npm install
-cd ..
 ```
+
+This creates `.venv/`, installs `requirements.txt`, and installs the frontend npm packages.
 
 ## Running the Application
 
-Start the backend from the `backend/` directory:
+Start both the FastAPI backend and Vite frontend from one terminal:
 
 ```bash
-source .venv/bin/activate
-cd backend
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-Start the frontend in a second terminal:
-
-```bash
-cd frontend
 npm run dev
 ```
 

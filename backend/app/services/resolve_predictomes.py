@@ -1,51 +1,66 @@
-from fastapi import FastAPI
+from __future__ import annotations
+
+from collections import defaultdict
+
 import pandas as pd
-# python3 resolve_predictomes.py
-df=pd.read_csv('../Data/Predictomes/Predictomes.csv')
-def resolve_predictomes(input_id:str,tax_id:str):
-    (rows,columns)=df.shape
-    num_rows=rows
-    i=0
-    interactions=[]
-    interactors_list=[]
-    interactions.append({"info":{"database":"Predictomes","Input_UniProt":input_id,"organism":"Human"}})
 
-    while i<num_rows:
-        interaction=df.loc[i,'uniprot_ids']
-        interaction_list=interaction.split(":")
-        UniprotId_A=interaction_list[0].strip()
-        UniprotId_B=interaction_list[1].strip()
 
-        if(UniprotId_A==input_id):
-            interactor=UniprotId_B
-            filt=(df['uniprot_ids']==f"{input_id}:{interactor}")
-            extraction_row=(df.loc[filt])
-            spoc_score:float=extraction_row['spoc_score'].values[0]
-            kirc_score:float=extraction_row['kirc_score'].values[0]
-            num_unique_contacts:int=extraction_row['num_unique_contacts'].values[0]
+PREDICTOMES_DF = pd.read_csv("../Data/Predictomes/Predictomes.csv")
+PREDICTOMES_INDEX: dict[str, list[dict]] = defaultdict(list)
 
-            interactors_list.append({"Interactor_A":UniprotId_B,"Interactor_B":UniprotId_A,"spoc_score":float(spoc_score),"kirc_score":float(kirc_score),"num_unique_contacts":int(num_unique_contacts),"Interactor_Link":f"https://predictomes.org/hp/?pid={UniprotId_B}"})
 
-        if(UniprotId_B==input_id):
-            interactor=UniprotId_A
-            filt=(df['uniprot_ids']==f"{interactor}:{input_id}")
-            extraction_row=(df.loc[filt])
-            spoc_score:float=extraction_row['spoc_score'].values[0]
-            kirc_score:float=extraction_row['kirc_score'].values[0]
-            num_unique_contacts:int=extraction_row['num_unique_contacts'].values[0]
-            interactors_list.append({"Interactor_A":UniprotId_A,"Interactor_B":UniprotId_B,"spoc_score":float(spoc_score),"kirc_score":float(kirc_score),"num_unique_contacts":int(num_unique_contacts),"Interactor_Link":f"https://predictomes.org/hp/?pid={UniprotId_A}"})
+def _extract_predictomes_gene_names(complex_name: str) -> tuple[str | None, str | None]:
+    parts = str(complex_name).split("__")
+    if len(parts) < 2:
+        return None, None
 
-        i+=1
-    
+    def normalize(value: str) -> str | None:
+        token = value.split("_", 1)[0].strip()
+        return token or None
 
-    sorted_interactions=sorted(interactors_list, key=lambda x: x['spoc_score'], reverse=True)
-    final_interactions=[]
-    for data in sorted_interactions:
-        if(data['spoc_score']>0.0):
-            final_interactions.append(data)
-    if(len(final_interactions)==0):
+    return normalize(parts[0]), normalize(parts[1])
+
+for row in PREDICTOMES_DF.itertuples(index=False):
+    interaction = row.uniprot_ids.split(":")
+    if len(interaction) != 2:
+        continue
+
+    uniprot_a = interaction[0].strip()
+    uniprot_b = interaction[1].strip()
+    gene_name_a, gene_name_b = _extract_predictomes_gene_names(row.complex_name)
+    entry_ab = {
+        "Interactor_A": uniprot_b,
+        "Interactor_B": uniprot_a,
+        "Interactor_Gene_Name": gene_name_b,
+        "spoc_score": float(row.spoc_score),
+        "kirc_score": float(row.kirc_score),
+        "num_unique_contacts": int(row.num_unique_contacts),
+        "Interactor_Link": f"https://predictomes.org/hp/?pid={uniprot_b}",
+    }
+    entry_ba = {
+        "Interactor_A": uniprot_a,
+        "Interactor_B": uniprot_b,
+        "Interactor_Gene_Name": gene_name_a,
+        "spoc_score": float(row.spoc_score),
+        "kirc_score": float(row.kirc_score),
+        "num_unique_contacts": int(row.num_unique_contacts),
+        "Interactor_Link": f"https://predictomes.org/hp/?pid={uniprot_a}",
+    }
+    PREDICTOMES_INDEX[uniprot_a].append(entry_ab)
+    PREDICTOMES_INDEX[uniprot_b].append(entry_ba)
+
+
+def resolve_predictomes(input_id: str, tax_id: str):
+    interactions = [{"info": {"database": "Predictomes", "Input_UniProt": input_id, "organism": "Human"}}]
+
+    interactors_list = sorted(
+        [item for item in PREDICTOMES_INDEX.get(input_id, []) if item["spoc_score"] > 0.0],
+        key=lambda item: item["spoc_score"],
+        reverse=True,
+    )
+
+    if len(interactors_list) == 0:
         return "The input doesn't exist on Predictomes"
-    interactions.append({"Interactors":final_interactions})
 
+    interactions.append({"Interactors": interactors_list})
     return interactions
-

@@ -1,37 +1,79 @@
+from __future__ import annotations
+
 import pandas as pd
 
-def resolve_corum(input_id:str,tax_id:str):
-    df1=pd.read_csv("../Data/Corum/corum_uniprotCorumMapping.txt",sep="\t")
-    (rows,columns)=df1.shape
-    i=0
-    corum_id=""
-    while(i<rows):
-        if (df1.loc[i,'UniProtKB_accession_number']==input_id):
-            corum_id=df1.loc[i,'corum_id']
-        i+=1
-    if(corum_id==""):
+
+CORUM_MAPPING_DF = pd.read_csv("../Data/Corum/corum_uniprotCorumMapping.txt", sep="\t")
+CORUM_COMPLEXES_DF = pd.read_json("../Data/Corum/corum_allComplexes.json")
+
+
+def _clean_value(value):
+    if isinstance(value, list):
+        return [_clean_value(item) for item in value]
+
+    if isinstance(value, dict):
+        return {key: _clean_value(item) for key, item in value.items()}
+
+    if pd.isna(value):
+        return None
+
+    if hasattr(value, "item") and not isinstance(value, (str, bytes)):
+        try:
+            return value.item()
+        except (ValueError, TypeError):
+            pass
+
+    return value
+
+
+def resolve_corum(input_id: str, tax_id: str):
+    matches = CORUM_MAPPING_DF.loc[
+        CORUM_MAPPING_DF["UniProtKB_accession_number"] == input_id, "corum_id"
+    ]
+    if matches.empty:
         return "this input does not exist in the Corum Database"
 
-    df=pd.read_json("../Data/Corum/corum_allComplexes.json")
-    (rows,columns)=df.shape
-    i=3
-    interactions=[]
-    while(i<rows):
-        if(df.loc[i,'complex_id']==corum_id):
-            purification_methods=df.loc[i,'purification_methods']
-            purification_methods_name=[]
-            for methods in purification_methods:
-                purification_methods_name.append(methods['name'])
-            
-            interactions.append({"info":{"database":'CORUM',"Input_UniProt":input_id,"organism":df.loc[i,'organism'],"complex_name":df.loc[i,'complex_name'],"cell_line":df.loc[i,'cell_line'],"Purification_Method":purification_methods_name}})
+    corum_id = matches.iloc[0]
+    complex_rows = CORUM_COMPLEXES_DF.loc[CORUM_COMPLEXES_DF["complex_id"] == corum_id]
+    if complex_rows.empty:
+        return "this input does not exist in the Corum Database"
 
+    complex_row = complex_rows.iloc[0]
+    purification_methods_name = [
+        _clean_value(method.get("name"))
+        for method in complex_row["purification_methods"]
+        if method.get("name")
+    ]
 
-            interactors_list=[]
-            for subunit in df.loc[i,'subunits']:
-                if(subunit['swissprot']['uniprot_id']==input_id):
-                    continue
-                interactors_list.append({"Interactor_A":subunit['swissprot']['uniprot_id'],"Interactor_B":input_id,"Organism":subunit['swissprot']['organism'],"Interactor_Link":f"https://mips.helmholtz-muenchen.de/corum/?query={subunit['swissprot']['uniprot_id']}"})
-            interactions.append({"Interactors":interactors_list})
-            break
-        i+=1
+    interactions = [
+        {
+            "info": {
+                "database": "CORUM",
+                "Input_UniProt": input_id,
+                "organism": _clean_value(complex_row["organism"]),
+                "complex_name": _clean_value(complex_row["complex_name"]),
+                "cell_line": _clean_value(complex_row["cell_line"]),
+                "Purification_Method": purification_methods_name,
+            }
+        }
+    ]
+
+    interactors_list = []
+    for subunit in complex_row["subunits"]:
+        swissprot = subunit.get("swissprot") or {}
+        interactor_id = _clean_value(swissprot.get("uniprot_id"))
+        if interactor_id == input_id or not interactor_id:
+            continue
+
+        interactors_list.append(
+            {
+                "Interactor_A": interactor_id,
+                "Interactor_B": input_id,
+                "Interactor_Gene_Name": _clean_value(swissprot.get("gene_name")),
+                "Organism": _clean_value(swissprot.get("organism")),
+                "Interactor_Link": f"https://mips.helmholtz-muenchen.de/corum/?query={interactor_id}",
+            }
+        )
+
+    interactions.append({"Interactors": interactors_list})
     return interactions

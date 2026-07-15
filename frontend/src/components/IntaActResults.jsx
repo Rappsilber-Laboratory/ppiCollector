@@ -2,11 +2,11 @@ import DBHeader from './DBHeader'
 import DBTable from './DBTable'
 
 const IntActResults = ({ data }) => {
-    const info = data.IntAct[0].info
     const Interactions = data.IntAct[1].Interactions
 
     const headers = [
         { label: 'Interactor' },
+        { label: 'Gene Name' },
         { label: 'Organism' },
         { label: '# Interactions', info: 'Total number of interactions recorded in IntAct' },
         { label: 'Interaction Score', info: 'MIscore — confidence score based on experimental evidence' },
@@ -18,6 +18,7 @@ const IntActResults = ({ data }) => {
     const rows = Interactions.map((i) => (
         <>
             <td className="px-4 py-3 font-semibold text-indigo-700">{i.Interactor_A}</td>
+            <td className="px-4 py-3 text-gray-700">{i.Interactor_Gene_Name || '-'}</td>
             <td className="px-4 py-3 text-gray-500 italic">{i.organism}</td>
             <td className="px-4 py-3 text-gray-600">{i.Num_Interaction_IntAct}</td>
             <td className="px-4 py-3">
@@ -35,7 +36,7 @@ const IntActResults = ({ data }) => {
 
     return (
         <div className="bg-white  shadow-md mb-8 overflow-hidden">
-            <DBHeader name="IntAct" subtitle="Experimentally verified molecular interactions" count={Interactions.length} color="bg-slate-600 " />
+            <DBHeader name="IntAct" subtitle="Experimentally verified molecular interactions" count={Interactions.length} color="bg-fuchsia-700" />
             <div className="p-6">
     {Interactions.length > 0 ? (
         <DBTable headers={headers} rows={rows} />

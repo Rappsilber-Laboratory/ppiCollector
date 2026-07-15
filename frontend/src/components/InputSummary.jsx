@@ -5,10 +5,15 @@ const InputSummary = ({input}) => {
     <div className='bg-blue-100 p-6 mb-8'>
       <h2 className='font-bold text-2xl mb-4'>Search Summary</h2>
       <p>
-        <strong>Protein:</strong>{input.UniProtId}
+        <strong>Protein:</strong> {input.UniProtId}
       </p>
+      {input.SpeciesName && (
       <p>
-        <strong>Taxonomy Id:</strong>{input.TaxonomyId}
+        <strong>Species:</strong> {input.SpeciesName}
+      </p>
+      )}
+      <p>
+        <strong>Taxonomy Id:</strong> {input.TaxonomyId}
       </p>
     </div>
   );

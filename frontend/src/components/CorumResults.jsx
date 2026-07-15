@@ -8,6 +8,7 @@ const CorumResults = ({ data }) => {
 
     const headers = [
         { label: 'Interactor' },
+        { label: 'Gene Name' },
         { label: 'Organism' },
         { label: 'Link' }
     ]
@@ -15,6 +16,7 @@ const CorumResults = ({ data }) => {
     const rows = Interactions.map((i) => (
         <>
             <td className="px-4 py-3 font-semibold text-indigo-700">{i.Interactor_A}</td>
+            <td className="px-4 py-3 text-gray-700">{i.Interactor_Gene_Name || '-'}</td>
             <td className="px-4 py-3 text-gray-500 italic">{i.Organism}</td>
             <td className="px-4 py-3">
                 <a href={i.Interactor_Link} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline font-medium">View ↗</a>
@@ -24,7 +26,7 @@ const CorumResults = ({ data }) => {
 
     return (
         <div className="bg-white  shadow-md mb-8 overflow-hidden">
-            <DBHeader name="CORUM" subtitle="Curated mammalian protein complex database" count={Interactions.length} color="bg-stone-600" />
+            <DBHeader name="CORUM" subtitle="Curated mammalian protein complex database" count={Interactions.length} color="bg-amber-700" />
             <MetadataCard fields={[
                 { label: 'Complex Name', value: info.complex_name },
                 { label: 'Cell Line', value: info.cell_line },

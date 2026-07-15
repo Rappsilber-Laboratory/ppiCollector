@@ -2,11 +2,11 @@ import DBHeader from './DBHeader'
 import DBTable from './DBTable'
 
 const BioGridResults = ({ data }) => {
-    const info = data.BioGrid[0].info
     const Interactions = data.BioGrid[1].Interactors
 
     const headers = [
         { label: 'Interactor' },
+        { label: 'Gene Name' },
         { label: 'Organism' },
         { label: 'Detection Method', info: 'Experimental method used to detect the interaction' },
         { label: 'Interaction Type', info: 'Type of molecular interaction (physical, genetic etc.)' },
@@ -17,6 +17,7 @@ const BioGridResults = ({ data }) => {
     const rows = Interactions.map((i) => (
         <>
             <td className="px-4 py-3 font-semibold text-indigo-700">{i.Interactor_A}</td>
+            <td className="px-4 py-3 text-gray-700">{i.Interactor_Gene_Name || '-'}</td>
             <td className="px-4 py-3 text-gray-500 italic">{i.organism}</td>
             <td className="px-4 py-3 text-gray-600 text-xs">{i.Interaction_Detection_Method}</td>
             <td className="px-4 py-3">
@@ -31,7 +32,7 @@ const BioGridResults = ({ data }) => {
 
     return (
         <div className="bg-white rounded-2xl shadow-md mb-8 overflow-hidden">
-            <DBHeader name="BioGRID" subtitle="Biological general repository for interaction datasets" count={Interactions.length} color="bg-zinc-700" />
+            <DBHeader name="BioGRID" subtitle="Biological general repository for interaction datasets" count={Interactions.length} color="bg-emerald-700" />
             <div className="p-6">
     {Interactions.length > 0 ? (
         <DBTable headers={headers} rows={rows} />
