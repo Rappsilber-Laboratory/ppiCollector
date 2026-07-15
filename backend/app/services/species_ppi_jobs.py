@@ -14,6 +14,7 @@ from app.services.resolve_corum import CORUM_COMPLEXES_DF
 from app.services.resolve_huri import HURI_DF
 from app.services.species_ppi_remote import (
     SpeciesJobCancelled,
+    SpeciesRemoteDataNotFound,
     ensure_intact_species_bundle,
     ensure_string_species_bundle,
 )
@@ -202,13 +203,26 @@ def _build_huri_species_rows(tax_id: str) -> list[dict]:
         return []
 
     rows = []
+    if {"Interactor_A_Ensembl", "Interactor_B_Ensembl"}.issubset(HURI_DF.columns):
+        for row in HURI_DF.itertuples(index=False):
+            interactor_a_uniprot = getattr(row, "Interactor_A_UniProt", None)
+            interactor_b_uniprot = getattr(row, "Interactor_B_UniProt", None)
+            interactor_a_ensembl = getattr(row, "Interactor_A_Ensembl")
+            interactor_b_ensembl = getattr(row, "Interactor_B_Ensembl")
+            rows.append(
+                {
+                    "Interactor_A": interactor_a_uniprot or interactor_a_ensembl,
+                    "Interactor_B": interactor_b_uniprot or interactor_b_ensembl,
+                    "Interactor_A_UniProt": interactor_a_uniprot or None,
+                    "Interactor_B_UniProt": interactor_b_uniprot or None,
+                    "Interactor_A_Ensembl": interactor_a_ensembl,
+                    "Interactor_B_Ensembl": interactor_b_ensembl,
+                }
+            )
+        return rows
+
     for row in HURI_DF.itertuples(index=False):
-        rows.append(
-            {
-                "Interactor_A": row.interactorA,
-                "Interactor_B": row.interactorB,
-            }
-        )
+        rows.append({"Interactor_A": row.interactorA, "Interactor_B": row.interactorB})
     return rows
 
 
@@ -297,13 +311,23 @@ def _run_species_job(job_id: str) -> None:
                 continue
 
             _set_job_status(job_id, db_name, status="running", message=f"{db_name} is processing")
-            if db_name == "String":
-                rows = ensure_string_species_bundle(tax_id, cancel_requested=lambda: _is_cancel_requested(job_id))
-            elif db_name == "IntAct":
-                rows = ensure_intact_species_bundle(tax_id, cancel_requested=lambda: _is_cancel_requested(job_id))
-            else:
-                rows = _build_species_database_rows(db_name, tax_id)
-                _raise_if_cancelled(job_id)
+            try:
+                if db_name == "String":
+                    rows = ensure_string_species_bundle(tax_id, cancel_requested=lambda: _is_cancel_requested(job_id))
+                elif db_name == "IntAct":
+                    rows = ensure_intact_species_bundle(tax_id, cancel_requested=lambda: _is_cancel_requested(job_id))
+                else:
+                    rows = _build_species_database_rows(db_name, tax_id)
+                    _raise_if_cancelled(job_id)
+            except SpeciesRemoteDataNotFound:
+                _set_job_status(
+                    job_id,
+                    db_name,
+                    status="not_available",
+                    message=f"{db_name} species file was not found for taxonomy ID {tax_id}",
+                    pair_count=0,
+                )
+                continue
 
             with JOBS_LOCK:
                 JOBS[job_id]["data"][db_name] = rows

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+
 const DB_OPTIONAL_COLUMNS = {
     String: [
         { key: 'combined_score', label: 'Combined Score' },
@@ -91,7 +93,7 @@ const DownloadPanel = ({ results, uniprot_id, tax_id }) => {
                 ? { results, selected_databases: selectedDbs, selected_columns: selectedColumns, uniprot_id, tax_id }
                 : { results, selected_databases: selectedDbs, selected_columns: [], uniprot_id, tax_id }
 
-            const response = await fetch(`http://127.0.0.1:8000${endpoint}`, {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)

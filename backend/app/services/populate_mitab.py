@@ -134,13 +134,21 @@ def populate_intact(data:list,final_columns:list,selected_columns:list,uniprot_i
 
 def populate_huri(data:list,final_columns:list,selected_columns:list,uniprot_id,tax_id):
     rows=[]
-    interactions=data[1]['Interactions']
+    interactions=data[1].get('Interactors', data[1].get('Interactions', []))
     for interaction in interactions:
         row={}
         for column in final_columns:
             row[column]="-"
-        row["#ID(s) interactor A"]=f"ensembl:{interaction.get("Interactor_A",'-')}"
-        row["ID(s) interactor B"]=f"ensembl:{interaction.get("Interactor_B",'-')}"
+        interactor_a_uniprot=interaction.get("Interactor_A_UniProt")
+        interactor_b_uniprot=interaction.get("Interactor_B_UniProt")
+        interactor_a_ensembl=interaction.get("Interactor_A_Ensembl")
+        interactor_b_ensembl=interaction.get("Interactor_B_Ensembl")
+        row["#ID(s) interactor A"]=(
+            f"uniprotkb:{interactor_a_uniprot}" if interactor_a_uniprot else f"ensembl:{interactor_a_ensembl or interaction.get('Interactor_A','-')}"
+        )
+        row["ID(s) interactor B"]=(
+            f"uniprotkb:{interactor_b_uniprot}" if interactor_b_uniprot else f"ensembl:{interactor_b_ensembl or interaction.get('Interactor_B','-')}"
+        )
         row["Source database(s)"]='psi-mi:"MI:1237"(huri)'
         rows.append(row)
     return rows

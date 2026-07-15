@@ -45,6 +45,10 @@ class SpeciesJobCancelled(Exception):
     pass
 
 
+class SpeciesRemoteDataNotFound(Exception):
+    pass
+
+
 def _check_cancel(cancel_requested: Callable[[], bool] | None) -> None:
     if cancel_requested and cancel_requested():
         raise SpeciesJobCancelled("Species PPI job was cancelled")
@@ -59,13 +63,20 @@ def _download_to_cache(url: str, destination: Path, cancel_requested: Callable[[
     if temp_path.exists():
         temp_path.unlink()
 
-    with requests.get(url, stream=True, timeout=120) as response:
-        response.raise_for_status()
-        with temp_path.open("wb") as handle:
-            for chunk in response.iter_content(chunk_size=1024 * 1024):
-                _check_cancel(cancel_requested)
-                if chunk:
-                    handle.write(chunk)
+    try:
+        with requests.get(url, stream=True, timeout=120) as response:
+            if response.status_code == 404:
+                raise SpeciesRemoteDataNotFound(f"Remote species file was not found: {url}")
+            response.raise_for_status()
+            with temp_path.open("wb") as handle:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    _check_cancel(cancel_requested)
+                    if chunk:
+                        handle.write(chunk)
+    except Exception:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise
 
     temp_path.replace(destination)
 

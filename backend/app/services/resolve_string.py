@@ -1,71 +1,142 @@
-from fastapi import FastAPI
+from functools import lru_cache
+
 import requests
-import time
-from app.services.convert_input_to_uniprotKB import get_job_id
-import pandas as pd
 
-URL="https://version-12-0.string-db.org/api"
-OUTPUT_FORMAT="json"
-METHOD1="get_string_ids"
-METHOD2="network"
-METHOD3="get_link"
-URL1="https://rest.uniprot.org/taxonomy"
-def taxon_id_to_name(tax_id:str):
-    tax_id_to_name_json=(requests.get(f"{URL1}/{tax_id}")).json()
-    return (tax_id_to_name_json['scientificName'])
 
-def get_string_interactions(input_id:str,tax_id:str):
-    payload_conversion={'species':(tax_id),'identifiers':input_id}
-    result_conversion=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD1}",data=payload_conversion)
-    result_conversion_json=(result_conversion.json())
-    if not result_conversion_json:
-        return {"error":"Protein not found in STRING","interactions":[],"network_link":None}
-    string_id=result_conversion_json[0]['stringId']
+URL = "https://version-12-0.string-db.org/api"
+OUTPUT_FORMAT = "json"
+METHOD1 = "get_string_ids"
+METHOD2 = "network"
+METHOD3 = "get_link"
+URL1 = "https://rest.uniprot.org/taxonomy"
+REQUEST_TIMEOUT = 15
 
-    payload_interactions={'identifiers':string_id}
-    result_interactions=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD2}",data=payload_interactions)
-    result_interactions_json=result_interactions.json()
 
-    interactions=[]
+def _error_response(message: str):
+    return {"error": message, "interactions": [], "network_link": None}
 
-    interactions.append({"info":{"database":"STRING","Input_UniProt":input_id,"organism":taxon_id_to_name(tax_id)}})
 
-    direct_interactors=[]
-    indirect_interactors=[]
+def _request_json(method: str, url: str, **kwargs):
+    response = requests.request(method, url, timeout=REQUEST_TIMEOUT, **kwargs)
+    response.raise_for_status()
+    return response.json()
+
+
+@lru_cache(maxsize=1024)
+def taxon_id_to_name(tax_id: str):
+    try:
+        tax_id_to_name_json = _request_json("GET", f"{URL1}/{tax_id}")
+        return tax_id_to_name_json.get("scientificName", str(tax_id))
+    except (requests.RequestException, ValueError):
+        return str(tax_id)
+
+
+@lru_cache(maxsize=4096)
+def _string_link(species: str, identifier: str):
+    try:
+        return _request_json(
+            "POST",
+            f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",
+            data={"species": species, "identifiers": identifier},
+        )
+    except (requests.RequestException, ValueError):
+        return []
+
+
+def get_string_interactions(input_id: str, tax_id: str):
+    try:
+        payload_conversion = {"species": tax_id, "identifiers": input_id}
+        result_conversion_json = _request_json(
+            "POST",
+            f"{URL}/{OUTPUT_FORMAT}/{METHOD1}",
+            data=payload_conversion,
+        )
+        if not result_conversion_json:
+            return _error_response("Protein not found in STRING")
+
+        string_id = result_conversion_json[0]["stringId"]
+
+        result_interactions_json = _request_json(
+            "POST",
+            f"{URL}/{OUTPUT_FORMAT}/{METHOD2}",
+            data={"identifiers": string_id},
+        )
+    except (requests.RequestException, ValueError, KeyError) as exc:
+        return _error_response(f"STRING request failed: {exc}")
+
+    interactions = []
+
+    interactions.append(
+        {"info": {"database": "STRING", "Input_UniProt": input_id, "organism": taxon_id_to_name(tax_id)}}
+    )
+
+    direct_interactors = []
+    indirect_interactors = []
 
     for data in result_interactions_json:
-        if(data['stringId_A']==string_id):
-            payload_get_link={'species':data['ncbiTaxonId'],'identifiers':data['preferredName_B']}
-            result_get_link=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",data=payload_get_link)
-            result_get_link_json=result_get_link.json()
-            Interactor_A=(data['preferredName_B'])
-            Interactor_B=(data['preferredName_A'])
-            direct_interactors.append({"Interactor_A":Interactor_A,"Interactor_B":Interactor_B,"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link":result_get_link_json})
-        if(data['stringId_B']==string_id):
-            payload_get_link={'species':data['ncbiTaxonId'],'identifiers':data['preferredName_A']}
-            result_get_link=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",data=payload_get_link)
-            result_get_link_json=result_get_link.json()
-            Interactor_A=(data['preferredName_A'])
-            Interactor_B=(data['preferredName_B'])
-            direct_interactors.append({"Interactor_A":Interactor_A,"Interactor_B":Interactor_B,"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link":result_get_link_json})
+        ncbi_taxon_id = str(data.get("ncbiTaxonId", tax_id))
+        organism_name = taxon_id_to_name(ncbi_taxon_id)
+
+        if data.get("stringId_A") == string_id:
+            interactor_a = data.get("preferredName_B", "-")
+            interactor_b = data.get("preferredName_A", "-")
+            direct_interactors.append(
+                {
+                    "Interactor_A": interactor_a,
+                    "Interactor_B": interactor_b,
+                    "Organism": organism_name,
+                    "combined_score": data.get("score"),
+                    "gene_neighbourhood_score": data.get("nscore"),
+                    "gene_fusion_score": data.get("fscore"),
+                    "phylogenetic_profile_score": data.get("pscore"),
+                    "experimental_score": data.get("escore"),
+                    "coexpression_score": data.get("ascore"),
+                    "textmining_score": data.get("tscore"),
+                    "database_score": data.get("dscore"),
+                    "Interactor_Link": _string_link(ncbi_taxon_id, interactor_a),
+                }
+            )
+        elif data.get("stringId_B") == string_id:
+            interactor_a = data.get("preferredName_A", "-")
+            interactor_b = data.get("preferredName_B", "-")
+            direct_interactors.append(
+                {
+                    "Interactor_A": interactor_a,
+                    "Interactor_B": interactor_b,
+                    "Organism": organism_name,
+                    "combined_score": data.get("score"),
+                    "gene_neighbourhood_score": data.get("nscore"),
+                    "gene_fusion_score": data.get("fscore"),
+                    "phylogenetic_profile_score": data.get("pscore"),
+                    "experimental_score": data.get("escore"),
+                    "coexpression_score": data.get("ascore"),
+                    "textmining_score": data.get("tscore"),
+                    "database_score": data.get("dscore"),
+                    "Interactor_Link": _string_link(ncbi_taxon_id, interactor_a),
+                }
+            )
         else:
-            payload_get_link_A={'species':data['ncbiTaxonId'],'identifiers':data['preferredName_A']}
-            result_get_link_A=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",data=payload_get_link_A)
-            result_get_link_json_A=result_get_link_A.json() 
+            interactor_a = data.get("preferredName_A", "-")
+            interactor_b = data.get("preferredName_B", "-")
+            indirect_interactors.append(
+                {
+                    "Interactor_A": interactor_a,
+                    "Interactor_B": interactor_b,
+                    "Organism": organism_name,
+                    "combined_score": data.get("score"),
+                    "gene_neighbourhood_score": data.get("nscore"),
+                    "gene_fusion_score": data.get("fscore"),
+                    "phylogenetic_profile_score": data.get("pscore"),
+                    "experimental_score": data.get("escore"),
+                    "coexpression_score": data.get("ascore"),
+                    "textmining_score": data.get("tscore"),
+                    "database_score": data.get("dscore"),
+                    "Interactor_Link_A": _string_link(ncbi_taxon_id, interactor_a),
+                    "Interactor_Link_B": _string_link(ncbi_taxon_id, interactor_b),
+                }
+            )
 
-            payload_get_link_B={'species':tax_id,'identifiers':data['preferredName_B']}
-            result_get_link_B=requests.post(f"{URL}/{OUTPUT_FORMAT}/{METHOD3}",data=payload_get_link_B)
-            result_get_link_json_B=result_get_link_B.json()
-
-            Interactor_A=(data['preferredName_A'])
-            Interactor_B=(data['preferredName_B'])
-
-            indirect_interactors.append({"Interactor_A":Interactor_A,"Interactor_B":Interactor_B,"Organism":taxon_id_to_name(data['ncbiTaxonId']),"combined_score":data["score"],"gene_neighbourhood_score":data["nscore"],"gene_fusion_score":data["fscore"],"phylogenetic_profile_score":data["pscore"],"experimental_score":data["escore"],"coexpression_score":data["ascore"],"textmining_score": data["tscore"],"database_score":data["dscore"],"Interactor_Link_A":result_get_link_json_A,"Interactor_Link_B":result_get_link_json_B})
-
-    interactions.append({"Direct_Interactions":direct_interactors})
-
-    interactions.append({"Indirect_Interactions":indirect_interactors})
+    interactions.append({"Direct_Interactions": direct_interactors})
+    interactions.append({"Indirect_Interactions": indirect_interactors})
 
     return interactions
-
-

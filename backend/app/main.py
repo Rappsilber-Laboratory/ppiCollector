@@ -10,7 +10,7 @@ from app.services.resolve_biogrid import resolve_biogrid
 from app.services.resolve_corum import resolve_corum
 from app.services.resolve_huri import resolve_HuRI
 from app.services.convert_input_to_ensembl import convert_to_ensemble
-from app.services.species_index import get_species_by_tax_id, get_supported_databases, resolve_species_name, search_species
+from app.services.species_index import get_species_by_tax_id, get_supported_databases, get_supported_organism_summary, resolve_species_name, search_species
 from app.services.species_ppi_export import build_species_mitab, build_species_parquet
 from app.services.species_ppi_jobs import cancel_species_ppi_job, create_species_ppi_job, get_species_display_name, get_species_ppi_job, get_species_ppi_job_rows
 from app.services.uniprot_gene_search import search_gene_name_candidates
@@ -46,6 +46,7 @@ app=FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5174","http://127.0.0.1:5174"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -71,10 +72,21 @@ def resolve_species_context(tax_id: Optional[str], species_name: Optional[str]):
 
     return resolved_tax_id, requested_species_name, resolved_species
 
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/species/search")
 def species_search(q:str="",limit:int=8):
     safe_limit=max(1,min(limit,10))
     return {"results":search_species(q,safe_limit)}
+
+
+@app.get("/supported-organisms/summary")
+def supported_organisms_summary():
+    return get_supported_organism_summary()
 
 
 @app.get("/gene-name/search")
@@ -270,7 +282,7 @@ def search(
                 selected_databases_dict["BioGrid"]=resolve_biogrid(uniprotkb_id,resolved_tax_id)
             if(db=="HuRI"):
                 ensembl_id=convert_to_ensemble(uniprotkb_id)
-                selected_databases_dict["HuRI"]=resolve_HuRI(ensembl_id,resolved_tax_id)
+                selected_databases_dict["HuRI"]=resolve_HuRI(ensembl_id,resolved_tax_id,uniprotkb_id)
     else:
         for db in selected_databases:
             if(db in available_databases):
@@ -286,7 +298,7 @@ def search(
                     selected_databases_dict["BioGrid"]=resolve_biogrid(uniprotkb_id,resolved_tax_id)
                 if(db=="HuRI"):
                     ensembl_id=convert_to_ensemble(uniprotkb_id)
-                    selected_databases_dict["HuRI"]=resolve_HuRI(ensembl_id,resolved_tax_id)
+                    selected_databases_dict["HuRI"]=resolve_HuRI(ensembl_id,resolved_tax_id,uniprotkb_id)
             else:
                 output.append({db:f"{db} does not have interactions for the given Input_id"})
     

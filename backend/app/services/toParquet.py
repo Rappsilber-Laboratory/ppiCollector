@@ -96,11 +96,15 @@ def flatten_results(results, selected_databases):
                 rows.append(temp)
 
         if "HuRI" in data and "HuRI" in selected_databases:
-            interactions=data["HuRI"][1]['Interactions']
+            interactions=data["HuRI"][1].get('Interactors', data["HuRI"][1].get('Interactions', []))
             for interaction in interactions:
                 temp={}
                 temp["Database"] = "HuRI"
                 temp["Interactor_A"]=interaction.get("Interactor_A",'-')
                 temp["Interactor_B"]=interaction.get("Interactor_B",'-')
+                temp["Interactor_A_UniProt"]=interaction.get("Interactor_A_UniProt",'-')
+                temp["Interactor_B_UniProt"]=interaction.get("Interactor_B_UniProt",'-')
+                temp["Interactor_A_Ensembl"]=interaction.get("Interactor_A_Ensembl",'-')
+                temp["Interactor_B_Ensembl"]=interaction.get("Interactor_B_Ensembl",'-')
                 rows.append(temp)
     return rows

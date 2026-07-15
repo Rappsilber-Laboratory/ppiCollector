@@ -70,37 +70,19 @@ git clone <your-repo-url>
 cd KlinkPPI
 ```
 
-Create a fresh Python virtual environment and install backend dependencies:
+Install the backend and frontend dependencies from the project root:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-Install frontend dependencies:
-
-```bash
-cd frontend
 npm install
-cd ..
 ```
+
+This creates `.venv/`, installs `requirements.txt`, and installs the frontend npm packages.
 
 ## Running the Application
 
-Start the backend from the `backend/` directory:
+Start both the FastAPI backend and Vite frontend from one terminal:
 
 ```bash
-source .venv/bin/activate
-cd backend
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-Start the frontend in a second terminal:
-
-```bash
-cd frontend
 npm run dev
 ```
 

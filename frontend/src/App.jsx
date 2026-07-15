@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 import Navbar from './components/Navbar'
+import OrganismCoveragePlots from './components/OrganismCoveragePlots'
 import SearchSection from './components/SearchSection'
 import InputSummary from './components/InputSummary'
 import InteractionOverlapLog from './components/InteractionOverlapLog'
@@ -89,6 +90,7 @@ function App() {
     return (
         <>
             <Navbar />
+            <OrganismCoveragePlots />
             <SearchSection setresults={setresults} />
 
             {results && (

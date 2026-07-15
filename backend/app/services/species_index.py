@@ -144,6 +144,74 @@ def get_supported_databases(tax_id: str | None) -> set[str]:
     return set(record["supported_databases"])
 
 
+def _load_supported_tax_id_sets() -> dict[str, set[str]]:
+    tax_ids_by_database: dict[str, set[str]] = {}
+
+    for database_name, file_path in SUPPORTED_ORGANISM_FILES.items():
+        tax_ids: set[str] = set()
+        with file_path.open(newline="", encoding="utf-8") as handle:
+            reader = DictReader(handle)
+            for row in reader:
+                tax_id = str(row.get("Taxon_id", "")).strip()
+                if tax_id:
+                    tax_ids.add(tax_id)
+        tax_ids_by_database[database_name] = tax_ids
+
+    return tax_ids_by_database
+
+
+def get_supported_organism_summary() -> dict:
+    tax_ids_by_database = _load_supported_tax_id_sets()
+    database_order = list(SUPPORTED_ORGANISM_FILES.keys())
+    all_tax_ids = set().union(*tax_ids_by_database.values())
+    shared_by_all = set.intersection(*(tax_ids_by_database[name] for name in database_order))
+
+    exact_overlap_counts: dict[tuple[str, ...], int] = defaultdict(int)
+    for tax_id in all_tax_ids:
+        databases = tuple(
+            database_name
+            for database_name in database_order
+            if tax_id in tax_ids_by_database[database_name]
+        )
+        if databases:
+            exact_overlap_counts[databases] += 1
+
+    pairwise_overlaps = []
+    for index, database_name in enumerate(database_order):
+        for other_database_name in database_order[index + 1:]:
+            pairwise_overlaps.append(
+                {
+                    "databases": [database_name, other_database_name],
+                    "count": len(tax_ids_by_database[database_name] & tax_ids_by_database[other_database_name]),
+                }
+            )
+
+    pairwise_overlaps.sort(key=lambda item: item["count"], reverse=True)
+
+    return {
+        "database_counts": [
+            {
+                "database": database_name,
+                "count": len(tax_ids_by_database[database_name]),
+            }
+            for database_name in database_order
+        ],
+        "union_count": len(all_tax_ids),
+        "shared_all_count": len(shared_by_all),
+        "exact_overlap_counts": [
+            {
+                "databases": list(databases),
+                "count": count,
+            }
+            for databases, count in sorted(
+                exact_overlap_counts.items(),
+                key=lambda item: (-len(item[0]), -item[1], item[0]),
+            )
+        ],
+        "pairwise_overlaps": pairwise_overlaps,
+    }
+
+
 def _score_species_record(record: dict, normalized_query: str, compact_query: str) -> tuple[int, int] | None:
     best_score: tuple[int, int] | None = None
 

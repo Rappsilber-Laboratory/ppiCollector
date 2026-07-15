@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import SpeciesDownloadPanel from './SpeciesDownloadPanel'
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const STATUS_STYLES = {
     pending: 'bg-slate-100 text-slate-700',
