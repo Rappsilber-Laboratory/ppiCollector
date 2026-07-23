@@ -67,6 +67,7 @@ const SearchSection = ({setresults}) => {
     const [speciesLogOpen,setspeciesLogOpen]=useState(true)
     const [selected_databases,setselected_databases]=useState([])
     const [loading,setloading]=useState(false)
+    const [loadingMessage,setloadingMessage]=useState('Searching databases...')
     const abortController = React.useRef(null)
     const speciesAbortController = React.useRef(null)
     const speciesSearchTimeout = React.useRef(null)
@@ -164,6 +165,16 @@ const SearchSection = ({setresults}) => {
     }, [speciesJob])
 
     const performMainSearch = async (idValue, sourceDatabase) => {
+        const mappingLabels = {
+            GeneID: 'NCBI GeneID',
+            Ensembl: 'Ensembl ID',
+            Gene_Name: 'gene name',
+        }
+        setloadingMessage(
+            sourceDatabase === 'UniProtKB'
+                ? 'Searching databases...'
+                : `Mapping ${mappingLabels[sourceDatabase] || sourceDatabase} to UniProtKB, then searching databases...`
+        )
         setloading(true)
         setresults(null)
         abortController.current = new AbortController()
@@ -222,6 +233,7 @@ const SearchSection = ({setresults}) => {
             return
         }
 
+        setloadingMessage('Finding matching UniProt entries...')
         setloading(true)
         abortController.current = new AbortController()
 
@@ -315,6 +327,7 @@ const SearchSection = ({setresults}) => {
         }
 
         setloading(true)
+        setloadingMessage('Building complete species PPI search...')
         setresults(null)
         abortController.current = new AbortController()
 
@@ -625,7 +638,7 @@ const SearchSection = ({setresults}) => {
           </div>
           {loading && (
           <div className="text-center lg:text-left">
-            <p className="text-blue-900 font-semibold mb-3">Searching databases...</p>
+            <p className="text-blue-900 font-semibold mb-3">{loadingMessage}</p>
             <div className="flex flex-col gap-2">
               {(selected_databases.length > 0 ? selected_databases:['String', 'IntAct', 'BioGrid', 'Corum', 'Predictomes', 'HuRI']).map(db => (
                 <div key={db} className="flex items-center gap-2 text-gray-600 justify-center lg:justify-start">
