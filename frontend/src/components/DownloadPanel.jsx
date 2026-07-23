@@ -24,6 +24,7 @@ const DB_OPTIONAL_COLUMNS = {
     BioGrid: [
         { key: 'Interaction_Type', label: 'Interaction Type' },
         { key: 'Interaction_Detection_Method', label: 'Detection Method' },
+        { key: 'Confidence_Score', label: 'Confidence Score' },
     ],
     Predictomes: [
         { key: 'spoc_score', label: 'SPOC Score' },
@@ -43,7 +44,11 @@ const DEFAULT_COLUMNS = [
     "ID(s) interactor B",
     "Taxid interactor A",
     "Taxid interactor B",
+    "Interaction detection method(s)",
+    "Interaction type(s)",
+    "Publication Identifier(s)",
     "Source database(s)",
+    "Confidence value(s)",
 ]
 
 const DownloadPanel = ({ results, uniprot_id, tax_id }) => {
