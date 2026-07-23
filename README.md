@@ -1,6 +1,6 @@
 # KlinkPPI
 
-KlinkPPI is a web application for exploring protein-protein interaction (PPI) data across multiple sources from one interface. It combines results from `STRING`, `CORUM`, `IntAct`, `BioGRID`, `HuRI`, and `Predictomes`, then lets users inspect and download the results in `PSI-MI TAB 2.8` or `Parquet` format.
+KlinkPPI is a web application for exploring protein-protein interaction (PPI) data across multiple sources from one interface. It combines results from `STRING`, `CORUM`, `IntAct`, `BioGRID`, `HuRI`, and `Predictomes`, then lets users inspect and download the results in a `PSI-MI TAB 2.8`-compatible tab-delimited format or `Parquet`.
 
 ## Features
 
@@ -8,7 +8,7 @@ KlinkPPI is a web application for exploring protein-protein interaction (PPI) da
 - Filter queries by taxonomy ID
 - Query one database or several at once
 - Review results in separate sections by database
-- Download selected results as `MI TAB` or `Parquet`
+- Download selected results as `MI TAB`-compatible tab-delimited files or `Parquet`
 
 ## Examples
 
@@ -93,6 +93,7 @@ http://localhost:5174
 - The backend CORS configuration currently allows `http://localhost:5174`.
 - Several backend resolvers call external services such as UniProt, Ensembl, STRING, and IntAct, so an internet connection is required for full functionality.
 - If `npm run dev` or `npm run build` fails after switching Node versions, remove stale dependencies and reinstall with `npm install`.
+- MITAB exports use shared core columns for all selected databases. The `Source database(s)` field uses verified PSI-MI source terms where available: `psi-mi:"MI:1014"(string)`, `psi-mi:"MI:0463"(biogrid)`, and `psi-mi:"MI:0469"(intact)`. Sources without verified PSI-MI database terms are exported as `corum`, `huri`, and `predictomes`.
 
 ## API Endpoints
 
