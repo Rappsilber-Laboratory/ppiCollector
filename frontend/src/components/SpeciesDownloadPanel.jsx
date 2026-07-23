@@ -42,7 +42,11 @@ const DEFAULT_COLUMNS = [
   'ID(s) interactor B',
   'Taxid interactor A',
   'Taxid interactor B',
+  'Interaction detection method(s)',
+  'Interaction type(s)',
+  'Publication Identifier(s)',
   'Source database(s)',
+  'Confidence value(s)',
 ]
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'

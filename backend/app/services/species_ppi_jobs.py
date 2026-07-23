@@ -33,15 +33,23 @@ JOBS_LOCK = threading.Lock()
 PREDICTOMES_DF = pd.read_csv(PREDICTOMES_SOURCE_PATH)
 
 
-CORUM_ORGANISM_BY_TAX_ID = {
-    "9606": "Human",
-    "10090": "Mouse",
-    "9823": "Pig",
-    "9913": "Bovine",
-    "10116": "Rat",
-    "9986": "Rabbit",
-    "9615": "Dog",
-    "10029": "Hamster",
+CORUM_SPECIES_BY_TAX_ID = {
+    "9606": {"complex_organisms": {"Human", "Mammalia"}, "subunit_organism": "Homo sapiens (Human)"},
+    "10090": {"complex_organisms": {"Mouse", "Mammalia"}, "subunit_organism": "Mus musculus (Mouse)"},
+    "10116": {"complex_organisms": {"Rat", "Mammalia"}, "subunit_organism": "Rattus norvegicus (Rat)"},
+    "9913": {"complex_organisms": {"Bovine", "Mammalia"}, "subunit_organism": "Bos taurus (Bovine)"},
+    "9823": {"complex_organisms": {"Pig", "Mammalia"}, "subunit_organism": "Sus scrofa (Pig)"},
+    "9986": {"complex_organisms": {"Rabbit", "Mammalia"}, "subunit_organism": "Oryctolagus cuniculus (Rabbit)"},
+    "9615": {"complex_organisms": {"Dog", "Mammalia"}, "subunit_organism": "Canis lupus familiaris (Dog)"},
+    "10030": {"complex_organisms": {"Hamster", "Mammalia"}, "subunit_organism": "Cricetus cricetus (Black-bellied hamster)"},
+    "60711": {"complex_organisms": {"Mammalia"}, "subunit_organism": "Chlorocebus sabaeus (Green monkey)"},
+    "10036": {"complex_organisms": {"Hamster", "Mammalia"}, "subunit_organism": "Mesocricetus auratus (Golden hamster)"},
+    "9940": {"complex_organisms": {"Mammalia"}, "subunit_organism": "Ovis aries (Sheep)"},
+    "9544": {"complex_organisms": {"Mammalia"}, "subunit_organism": "Macaca mulatta (Rhesus macaque)"},
+    "89462": {"complex_organisms": {"Mammalia"}, "subunit_organism": "Bubalus bubalis (Domestic water buffalo)"},
+    "10141": {"complex_organisms": {"Mammalia"}, "subunit_organism": "Cavia porcellus (Guinea pig)"},
+    "10029": {"complex_organisms": {"Hamster", "Mammalia"}, "subunit_organism": "Cricetulus griseus (Chinese hamster)"},
+    "452646": {"complex_organisms": {"MINK"}, "subunit_organism": "Neovison vison (American mink)"},
 }
 
 
@@ -227,16 +235,20 @@ def _build_huri_species_rows(tax_id: str) -> list[dict]:
 
 
 def _build_corum_species_rows(tax_id: str) -> list[dict]:
-    organism_name = CORUM_ORGANISM_BY_TAX_ID.get(tax_id)
-    if not organism_name:
+    species_config = CORUM_SPECIES_BY_TAX_ID.get(tax_id)
+    if not species_config:
         return []
 
+    complex_organisms = species_config["complex_organisms"]
+    subunit_organism = species_config["subunit_organism"]
     rows = []
-    complexes = CORUM_COMPLEXES_DF.loc[CORUM_COMPLEXES_DF["organism"] == organism_name]
+    complexes = CORUM_COMPLEXES_DF.loc[CORUM_COMPLEXES_DF["organism"].isin(complex_organisms)]
     for complex_row in complexes.itertuples(index=False):
         subunits = []
         for subunit in complex_row.subunits:
             swissprot = subunit.get("swissprot") or {}
+            if swissprot.get("organism") != subunit_organism:
+                continue
             interactor_id = swissprot.get("uniprot_id")
             if not interactor_id:
                 continue
